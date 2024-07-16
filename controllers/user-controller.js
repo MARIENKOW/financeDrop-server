@@ -117,7 +117,8 @@ class Controller {
          const { refreshToken } = req.cookies
          if (!refreshToken) return res.status(401).json('not Authorization')
          const userData = await token.findToken(refreshToken);
-         if (!userData) return res.status(401).json('not Authorization')
+         const ansData = token.validateRefreshToken(refreshToken);
+         if (!ansData || !userData) return res.status(401).json('not Authorization')
          return res.json(userData)
       } catch (e) {
          res.status(500).json(e.message)
