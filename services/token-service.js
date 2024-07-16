@@ -10,16 +10,28 @@ class TokenService {
          refreshToken
       }
    }
-   async saveToken(userId, refreshToken) {
+   async saveTokenUser(userId, refreshToken) {
       const [rezult] = await DB.query(`SELECT refreshToken from user where id = '${userId}'`);
       return await DB.query(`UPDATE user SET refreshToken = '${refreshToken}' WHERE id = '${userId}';`)
    }
-   async removeToken(refreshToken) {
+   async removeTokenUser(refreshToken) {
       const token = await DB.query(`UPDATE user SET refreshToken = null where user.refreshToken = '${refreshToken}'`)
       return token;
    }
-   async findToken(refreshToken) {
+   async findTokenUser(refreshToken) {
       const [token] = await DB.query(`SELECT * FROM user where user.refreshToken = '${refreshToken}'`)
+      return token[0];
+   }
+   async saveTokenAdmin(adminId, refreshTokenAdmin) {
+      const [rezult] = await DB.query(`SELECT refreshToken from admin where id = '${adminId}'`);
+      return await DB.query(`UPDATE admin SET refreshToken = '${refreshTokenAdmin}' WHERE id = '${adminId}';`)
+   }
+   async removeTokenAdmin(refreshTokenAdmin) {
+      const token = await DB.query(`UPDATE admin SET refreshToken = null where admin.refreshToken = '${refreshTokenAdmin}'`)
+      return token;
+   }
+   async findTokenAdmin(refreshTokenAdmin) {
+      const [token] = await DB.query(`SELECT * FROM admin where admin.refreshToken = '${refreshTokenAdmin}'`)
       return token[0];
    }
    validateAccessToken(token) {

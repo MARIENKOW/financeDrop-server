@@ -18,7 +18,7 @@ class Controller {
          if (!isPassEquals) return res.status(400).json({password:'Password is not correct'})
          if (!mailFromDB[0].isActivated) return res.status(400).json({'root.server':'Account is not activated. check your email'})
          const tokens = token.generateTokens({ id: mailFromDB[0].id, email })
-         await token.saveToken(mailFromDB[0].id, tokens.refreshToken);
+         await token.saveTokenUser(mailFromDB[0].id, tokens.refreshToken);
          await res.cookie('refreshToken', tokens.refreshToken, { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true });
          res.status(200).json({
             accessToken: tokens.accessToken,
@@ -58,7 +58,7 @@ class Controller {
             await DB.query(`INSERT INTO Activate VALUES ('${activationLink}','${info.insertId}',TIMESTAMPADD(MINUTE,30,NOW()),NULL)`)
             await mailService.sendMessage(email, `${process.env.CLIENT_URL}/Activate/${activationLink}`)
             const tokens = token.generateTokens({ id: info.insertId, email })
-            await token.saveToken(info.insertId, tokens.refreshToken);
+            await token.saveTokenUser(info.insertId, tokens.refreshToken);
          }catch(e){
             await DB.query(`DELETE FROM user WHERE id = '${info.insertId}'`);
             throw new Error()
@@ -75,8 +75,8 @@ class Controller {
          const { token } = req.body
          const [activate] = await DB.query(`SELECT * from Activate where token = '${token}' and date_end > NOW()`);
          if (activate.length === 0) return res.status(400).json('Activation token is not found');
-         await DB.query(`DELETE FROM Activate where token = '${token}'`);
          await DB.query(`UPDATE user set isActivated = true where id = ${activate[0].user_id}`);
+         await DB.query(`DELETE FROM Activate where token = '${token}'`);
          res.status(200).json(true)
       } catch (e) {
          console.log(e);
@@ -88,7 +88,7 @@ class Controller {
       try {
          const { refreshToken } = req.cookies;
          res.clearCookie('refreshToken')
-         await token.removeToken(refreshToken);
+         await token.removeTokenUser(refreshToken);
          res.status(200).json(true)
       } catch (e) {
          res.status(500).json(e.message)
@@ -101,10 +101,10 @@ class Controller {
          if (!refreshToken) return res.status(401).json('not authorized user');
 
          const ansData = token.validateRefreshToken(refreshToken);
-         const userData = await token.findToken(refreshToken);
+         const userData = await token.findTokenUser(refreshToken);
          if (!ansData || !userData) return res.status(401).json('not authorized user');
          const tokens = token.generateTokens({ id: userData.id, email: userData.email })
-         await token.saveToken(userData.id, tokens.refreshToken);
+         await token.saveTokenUser(userData.id, tokens.refreshToken);
          await res.cookie('refreshToken', tokens.refreshToken, { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true });
          res.status(200).json(tokens.accessToken)
       } catch (e) {
@@ -116,7 +116,7 @@ class Controller {
       try {
          const { refreshToken } = req.cookies
          if (!refreshToken) return res.status(401).json('not Authorization')
-         const userData = await token.findToken(refreshToken);
+         const userData = await token.findTokenUser(refreshToken);
          const ansData = token.validateRefreshToken(refreshToken);
          if (!ansData || !userData) return res.status(401).json('not Authorization')
          return res.json(userData)
@@ -140,7 +140,7 @@ class Controller {
 
          const [alreadySend] = await DB.query(`SELECT * from rememberPass where user_id = '${user_id}' and dateEndChange > NOW()`)
 
-         if (alreadySend.length > 0) return res.status(400).json({ 'root.server':'The password reset email has already been sent.' })
+         if (alreadySend.length > 0) return res.status(400).json({ 'root.server':'The password reset email has already been send.' })
 
 
          const response = await DB.query(`INSERT into rememberPass values (null,'${rememberPassLink}','${user_id}',TIMESTAMPADD(MINUTE,30,NOW()))`)

@@ -4,6 +4,7 @@ import UserRouter from './routers/UserRouter.js'
 import * as dotenv from 'dotenv';
 import cookieParser from "cookie-parser";
 import http from 'http';
+import AdminRouter from "./routers/AdminRouter.js";
 
 
 dotenv.config()
@@ -18,6 +19,7 @@ app.use(cors({
    origin: process.env.CLIENT_URL,
 }));
 app.use('/User', UserRouter);
+app.use('/Admin', AdminRouter);
 
 const web = http.Server(app);
 
