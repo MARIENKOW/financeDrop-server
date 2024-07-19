@@ -1,5 +1,6 @@
 import { sequelize } from "../services/DB.js";
 import Sequelize, { sql,DataTypes } from '@sequelize/core';
+import config from "../config.js";
 
 export const Activate = sequelize.define(
    'Activate',
@@ -20,7 +21,7 @@ export const Activate = sequelize.define(
      },
      date_end: {
       type: DataTypes.DATE,
-      defaultValue:sequelize.fn('TIMESTAMPADD',sequelize.literal('MINUTE'),30,sequelize.fn('NOW')),
+      defaultValue:sequelize.fn('TIMESTAMPADD',sequelize.literal('MINUTE'),config.ACTIVATE_TOKEN_MINUTES,sequelize.fn('NOW')),
       allowNull:false
      },
    },
