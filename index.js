@@ -6,7 +6,6 @@ import cookieParser from "cookie-parser";
 import http from 'http';
 import AdminRouter from "./routers/AdminRouter.js";
 
-
 dotenv.config()
 
 const PORT = process.env.PORT;
@@ -29,3 +28,4 @@ try {
 } catch (e) {
    console.log(`${e.message}`);
 }
+

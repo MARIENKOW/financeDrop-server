@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
-import DB from './DB.js';
+import { User } from '../models/User.js';
+import { Admin } from '../models/Admin.js';
 
 class TokenService {
    generateTokens(payload) {
@@ -11,41 +12,38 @@ class TokenService {
       }
    }
    async saveTokenUser(userId, refreshToken) {
-      const [rezult] = await DB.query(`SELECT refreshToken from user where id = '${userId}'`);
-      return await DB.query(`UPDATE user SET refreshToken = '${refreshToken}' WHERE id = '${userId}';`)
+      return await User.update({refreshToken},{where:{id:userId}})
    }
    async removeTokenUser(refreshToken) {
-      const token = await DB.query(`UPDATE user SET refreshToken = null where user.refreshToken = '${refreshToken}'`)
-      return token;
+      return await User.update({refreshToken:null},{where:{refreshToken}});
    }
    async findTokenUser(refreshToken) {
-      const [token] = await DB.query(`SELECT * FROM user where user.refreshToken = '${refreshToken}'`)
-      return token[0];
+      const {dataValues}  = await User.findOne({where:{refreshToken}})
+      return dataValues;
    }
    async saveTokenAdmin(adminId, refreshTokenAdmin) {
-      const [rezult] = await DB.query(`SELECT refreshToken from admin where id = '${adminId}'`);
-      return await DB.query(`UPDATE admin SET refreshToken = '${refreshTokenAdmin}' WHERE id = '${adminId}';`)
+      return await Admin.update({refreshToken:refreshTokenAdmin},{where:{id:adminId}})
+
    }
    async removeTokenAdmin(refreshTokenAdmin) {
-      const token = await DB.query(`UPDATE admin SET refreshToken = null where admin.refreshToken = '${refreshTokenAdmin}'`)
-      return token;
+      return await Admin.update({refreshToken:null},{where:{refreshToken:refreshTokenAdmin}});
    }
    async findTokenAdmin(refreshTokenAdmin) {
-      const [token] = await DB.query(`SELECT * FROM admin where admin.refreshToken = '${refreshTokenAdmin}'`)
-      return token[0];
+      const {dataValues}  = await Admin.findOne({where:{refreshToken:refreshTokenAdmin}})
+      return dataValues
    }
    validateAccessToken(token) {
       try {
-         const userData = jwt.verify(token, process.env.JWT_ACCESS_SECRET)
-         return userData;
+         const data = jwt.verify(token, process.env.JWT_ACCESS_SECRET)
+         return data;
       } catch (e) {
          return null;
       }
    }
    validateRefreshToken(token) {
       try {
-         const userData = jwt.verify(token, process.env.JWT_REFRESH_SECRET)
-         return userData;
+         const data = jwt.verify(token, process.env.JWT_REFRESH_SECRET)
+         return data;
       } catch (e) {
          return null;
       }

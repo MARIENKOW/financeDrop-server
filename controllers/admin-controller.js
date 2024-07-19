@@ -1,38 +1,29 @@
 import DB from '../services/DB.js';
 import bcrypt from 'bcrypt'
-import { v4 } from 'uuid';
 import token from '../services/token-service.js';
+import { Admin } from '../models/Admin.js';
 
 
 class Controller {
 
-   // signIn = async (req, res) => {
-   //    try {
-   //       const { name, password } = req.body;
-   //       const hashPassword = await bcrypt.hash(password, 5);
-   //       const [info] = await DB.query(`INSERT INTO admin VALUES (NULL, '${name}',  '${hashPassword}', NULL );`)
-   //       const tokens = token.generateTokens({ id: info.insertId, email })
-   //       await token.saveTokenUser(info.insertId, tokens.refreshToken);
-   //    } catch (e) {
-   //       console.log(e);
-   //       res.status(500).json(e.message)
-   //    }
-   // }
    signIn = async (req, res) => {
       try {
          const { name, password } = req.body;
          if (!name || !password) return res.status(400).json({ 'root.server':'Incorrect values' })
-         const [admin] = await DB.query(`SELECT * from admin where name = '${name}'`);
-         if (admin.length === 0) return res.status(400).json({name:'Name is not defined'})
-         const dbPass = admin[0].password;
+
+         const adminData = await Admin.findOne({where:{name}})
+         if (!adminData) return res.status(400).json({name:'Name is not defined'})
+         const {id,password:dbPass} = adminData;
+         // console.log(adminData.);
          const isPassEquals = await bcrypt.compare(password, dbPass);
          if (!isPassEquals) return res.status(400).json({password:'Password is not correct'})
-         const tokens = token.generateTokens({ id: admin[0].id, name })
-         await token.saveTokenAdmin(admin[0].id, tokens.refreshToken);
+         const tokens = token.generateTokens({ id, name })
+         await token.saveTokenAdmin(id, tokens.refreshToken);
          await res.cookie('refreshTokenAdmin', tokens.refreshToken, { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true });
+         console.log(adminData);
          res.status(200).json({
             accessTokenAdmin: tokens.accessToken,
-            admin: admin[0]
+            admin: adminData.dataValues
          })
       } catch (e) {
          console.log(e);
