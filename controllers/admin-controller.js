@@ -1,4 +1,3 @@
-import DB from '../services/DB.js';
 import bcrypt from 'bcrypt'
 import token from '../services/token-service.js';
 import { Admin } from '../models/Admin.js';
