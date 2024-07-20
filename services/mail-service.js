@@ -5,30 +5,30 @@ class MailService {
    constructor() {
       this.transporter = nodemailer.createTransport(config.mail);
    }
-   sendMessage = async(email, link, obj)=>{
+   sendMessage = async (email, link, obj) => {
       const change = {
-         subject: 'Change Your Password',
-         text: 'you have 30 minutes',
-         html:
-            `<div>
+         subject: "Change Your Password",
+         text: "you have 30 minutes",
+         html: `<div>
          <h1>For change tap on link</h1>
          <a href='${link}'>${link}</a>
-      </div>`}
+      </div>`,
+      };
       const activate = {
-         subject: 'Activations for Chat',
-         text: '',
-         html:
-            `<div>
+         subject: "Activations for Chat",
+         text: "",
+         html: `<div>
          <h1>For activation tap on link</h1>
          <a href='${link}'>${link}</a>
-      </div>`}
-      const inner = obj === 'change'? change : activate
+      </div>`,
+      };
+      const inner = obj === "change" ? change : activate;
       return this.transporter.sendMail({
          from: process.env.SMTP_USER,
          to: email,
-         ...inner
-      })
-   }
+         ...inner,
+      });
+   };
 }
 
 export default new MailService();

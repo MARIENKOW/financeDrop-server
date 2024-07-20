@@ -1,29 +1,25 @@
 import { sequelize } from "../services/DB.js";
 import { DataTypes } from "@sequelize/core";
 
-export const Admin = sequelize.define(
-   "Admin",
+export const Referral = sequelize.define(
+   "Referral",
    {
       id: {
          type: DataTypes.INTEGER,
          primaryKey: true,
          autoIncrement: true,
       },
-      password: {
-         type: DataTypes.STRING(100),
+      from_id: {
+         type: DataTypes.INTEGER,
          allowNull: false,
       },
-      name: {
-         type: DataTypes.STRING(30),
+      to_id: {
+         type: DataTypes.INTEGER,
          allowNull: false,
-      },
-      refreshToken: {
-         type: DataTypes.STRING(200),
-         allowNull: true,
-      },
+      }
    },
    {
-      tableName: "admin",
+      tableName: "referral",
       timestamps: false,
    }
 );

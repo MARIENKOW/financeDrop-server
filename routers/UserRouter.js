@@ -1,28 +1,30 @@
-import { Router, json } from 'express';
-import controller from '../controllers/user-controller.js';
-import autUserMiddelware from '../middlewares/authUser-middleware.js';
-import changePassMiddleware from '../middlewares/changePass-middleware.js';
-
+import { Router, json } from "express";
+import controller from "../controllers/user-controller.js";
+import autUserMiddelware from "../middlewares/authUser-middleware.js";
+import changePassMiddleware from "../middlewares/changePass-middleware.js";
 
 const UserRouter = new Router();
 
-UserRouter.post('/signIn', controller.signIn);
+UserRouter.post("/signIn", controller.signIn);
 
-UserRouter.post('/signUp', controller.signUp);
+UserRouter.post("/signUp", controller.signUp);
 
-UserRouter.post('/logOut', controller.logOut);
+UserRouter.post("/logOut", controller.logOut);
 
-UserRouter.get('/refresh', controller.refresh);
+UserRouter.get("/refresh", controller.refresh);
 
-UserRouter.post('/activate', controller.activate);
+UserRouter.post("/activate", controller.activate);
 
-UserRouter.get('/aboutUser', autUserMiddelware, controller.aboutUser);
+UserRouter.get("/aboutUser", autUserMiddelware, controller.aboutUser);
 
-UserRouter.post('/rememberPassword', controller.rememberPassword);
+UserRouter.post("/rememberPassword", controller.rememberPassword);
 
-UserRouter.post('/changePass', changePassMiddleware, controller.changePass);
+UserRouter.post("/changePass", changePassMiddleware, controller.changePass);
 
-UserRouter.post('/checkChangePassLink', changePassMiddleware, controller.checkChangePassLink);
-
+UserRouter.post(
+   "/checkChangePassLink",
+   changePassMiddleware,
+   controller.checkChangePassLink
+);
 
 export default UserRouter;
