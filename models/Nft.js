@@ -1,5 +1,6 @@
 import { sequelize } from "../services/DB.js";
 import {  DataTypes } from "@sequelize/core";
+import {NftBuy} from "./NftBuy.js"
 
 export const Nft = sequelize.define(
    "Nft",
@@ -43,5 +44,7 @@ export const Nft = sequelize.define(
       timestamps: false,
    }
 );
+
+Nft.hasOne(NftBuy, { foreignKey: "nft_id" });
 
 

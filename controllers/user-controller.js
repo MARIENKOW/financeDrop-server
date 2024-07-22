@@ -31,11 +31,9 @@ class Controller {
                .json({ password: "Password is not correct" });
 
          if (!dataValues.isActivated)
-            return res
-               .status(400)
-               .json({
-                  "root.server": "Account is not activated. check your email",
-               });
+            return res.status(400).json({
+               "root.server": "Account is not activated. check your email",
+            });
 
          const tokens = token.generateTokens({ id: dataValues.id, email });
          await token.saveTokenUser(dataValues.id, tokens.refreshToken);
@@ -247,12 +245,9 @@ class Controller {
 
          console.log(rememberPassData);
          if (rememberPassData)
-            return res
-               .status(400)
-               .json({
-                  "root.server":
-                     "The password reset email has already been send.",
-               });
+            return res.status(400).json({
+               "root.server": "The password reset email has already been send.",
+            });
 
          const rememberPassLink = v4();
 

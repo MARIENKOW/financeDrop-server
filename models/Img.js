@@ -1,5 +1,6 @@
 import { sequelize } from "../services/DB.js";
 import {  DataTypes } from "@sequelize/core";
+import { Nft } from "./Nft.js";
 
 export const Img = sequelize.define(
    "Img",
@@ -25,4 +26,4 @@ export const Img = sequelize.define(
    }
 );
 
-
+Img.hasOne(Nft,{foreignKey:'img_id'})
