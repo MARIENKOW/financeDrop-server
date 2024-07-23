@@ -25,8 +25,9 @@ class TokenService {
       );
    }
    async findTokenUser(refreshToken) {
-      const { dataValues } = await User.findOne({ where: { refreshToken } });
-      return dataValues;
+      const data = await User.findOne({ where: { refreshToken } });
+      if(!data) return null
+      return data.dataValues;
    }
    async saveTokenAdmin(adminId, refreshTokenAdmin) {
       return await Admin.update(
@@ -41,10 +42,11 @@ class TokenService {
       );
    }
    async findTokenAdmin(refreshTokenAdmin) {
-      const { dataValues } = await Admin.findOne({
+      const data = await Admin.findOne({
          where: { refreshToken: refreshTokenAdmin },
       });
-      return dataValues;
+      if(!data) return null
+      return data.dataValues;
    }
    validateAccessToken(token) {
       try {

@@ -1,7 +1,6 @@
 import token from "../services/token-service.js";
 
 const authAdminMiddleware = (req, res, next) => {
-   console.log("admin");
 
    try {
       const authorizationHeader = req.headers.authorization;

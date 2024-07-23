@@ -22,6 +22,9 @@ const NftRouter = new Router();
 
 NftRouter.post("/create", autAdminMiddelware, nftController.create);
 NftRouter.get("/getNotSold", autAdminMiddelware, nftController.getNotSold);
+NftRouter.get("/:id", autAdminMiddelware, nftController.getById);
+NftRouter.delete("/:id", autAdminMiddelware, nftController.delete);
+NftRouter.post("/update/:id", autAdminMiddelware, nftController.update);
 // NftRouter.post("/create", [autAdminMiddelware,upload], nftController.create);
 
 export default NftRouter;
