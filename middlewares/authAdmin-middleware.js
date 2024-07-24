@@ -1,7 +1,6 @@
 import token from "../services/token-service.js";
 
 const authAdminMiddleware = (req, res, next) => {
-
    try {
       const authorizationHeader = req.headers.authorization;
 
@@ -15,9 +14,13 @@ const authAdminMiddleware = (req, res, next) => {
 
       if (!adminData) return res.status(401).json("not authorized");
 
+      if (adminData.role !== "admin")
+         return res.status(401).json("not authorized");
+
       req.user = adminData;
       next();
    } catch (e) {
+      console.log(e);
       res.status(500).json("some Error in middleware");
       return next("some Error in middleware");
    }

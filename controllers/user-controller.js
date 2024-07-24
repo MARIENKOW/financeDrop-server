@@ -7,6 +7,7 @@ import { Activate } from "../models/Activate.js";
 import { Op } from "sequelize";
 import { sequelize } from "../services/DB.js";
 import { RememberPass } from "../models/RememberPass.js";
+import config from "../config.js";
 
 class Controller {
    signIn = async (req, res) => {
@@ -35,7 +36,7 @@ class Controller {
                "root.server": "Account is not activated. check your email",
             });
 
-         const tokens = token.generateTokens({ id: dataValues.id, email });
+         const tokens = token.generateTokens({ id: dataValues.id, email,role:'user' });
          await token.saveTokenUser(dataValues.id, tokens.refreshToken);
          await res.cookie("refreshToken", tokens.refreshToken, {
             maxAge: 30 * 24 * 60 * 60 * 1000,
@@ -124,9 +125,9 @@ class Controller {
             });
             await mailService.sendMessage(
                email,
-               `${process.env.CLIENT_URL}/Activate/${activationLink}`
+               `${process.env.CLIENT_URL}${config.CLIENT_ACTIVATE_ROUTE}/${activationLink}`
             );
-            const tokens = token.generateTokens({ id, email });
+            const tokens = token.generateTokens({ id, email,role:'user' });
             await token.saveTokenUser(id, tokens.refreshToken);
          } catch (e) {
             await insertUser.destroy();
@@ -192,6 +193,7 @@ class Controller {
          const tokens = token.generateTokens({
             id: userData.id,
             email: userData.email,
+            role:'user'
          });
          await token.saveTokenUser(userData.id, tokens.refreshToken);
          await res.cookie("refreshToken", tokens.refreshToken, {
@@ -258,7 +260,7 @@ class Controller {
          try {
             await mailService.sendMessage(
                userData.email,
-               `${process.env.CLIENT_URL}/ChangePass/${rememberPassLink}`,
+               `${process.env.CLIENT_URL}${config.CLIENT_CHANGE_PASSWORD_ROUTE}/${rememberPassLink}`,
                "change"
             );
          } catch (error) {

@@ -19,7 +19,7 @@ class Controller {
             return res
                .status(400)
                .json({ password: "Password is not correct" });
-         const tokens = token.generateTokens({ id, name });
+         const tokens = token.generateTokens({ id, name ,role:'admin'});
          await token.saveTokenAdmin(id, tokens.refreshToken);
          await res.cookie("refreshTokenAdmin", tokens.refreshToken, {
             maxAge: 30 * 24 * 60 * 60 * 1000,
@@ -59,6 +59,7 @@ class Controller {
          const tokens = token.generateTokens({
             id: adminData.id,
             name: adminData.name,
+            role:'admin'
          });
          await token.saveTokenAdmin(adminData.id, tokens.refreshToken);
          await res.cookie("refreshTokenAdmin", tokens.refreshToken, {

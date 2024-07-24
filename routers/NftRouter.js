@@ -1,5 +1,6 @@
 import { Router } from "express";
 import autAdminMiddelware from "../middlewares/authAdmin-middleware.js";
+import authUserAdminMiddelware from "../middlewares/authUser-Admin-middleware.js";
 import authMiddleware from "../middlewares/authUser-middleware.js";
 import nftController from "../controllers/nft-controller.js";
 import { v4 } from "uuid";
@@ -21,10 +22,9 @@ const upload = multer({ storage }).single("img");
 const NftRouter = new Router();
 
 NftRouter.post("/create", autAdminMiddelware, nftController.create);
-NftRouter.get("/getNotSold", autAdminMiddelware, nftController.getNotSold);
-NftRouter.get("/:id", autAdminMiddelware, nftController.getById);
+NftRouter.get("/getNotSold", authUserAdminMiddelware, nftController.getNotSold);
+NftRouter.get("/:id", authUserAdminMiddelware, nftController.getById);
 NftRouter.delete("/:id", autAdminMiddelware, nftController.delete);
 NftRouter.post("/update/:id", autAdminMiddelware, nftController.update);
-// NftRouter.post("/create", [autAdminMiddelware,upload], nftController.create);
 
 export default NftRouter;

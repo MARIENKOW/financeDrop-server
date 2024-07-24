@@ -1,7 +1,7 @@
 import token from "../services/token-service.js";
 
 const authMiddleware = (req, res, next) => {
-   console.log('user');
+   console.log("user");
 
    try {
       const authorizationHeader = req.headers.authorization;
@@ -13,14 +13,10 @@ const authMiddleware = (req, res, next) => {
       if (!accessToken) return res.status(401).json("not authorized");
 
       const userData = token.validateAccessToken(accessToken);
-      if (!userData) return res.status(401).json("not authorized"); 
-
-      if (userData.role !== 'user') return res.status(401).json("not authorized");
-      
+      if (!userData) return res.status(401).json("not authorized");
       req.user = userData;
       next();
    } catch (e) {
-
       return res.status(500).json("some Error in middleware");
    }
 };

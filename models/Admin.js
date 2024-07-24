@@ -18,7 +18,7 @@ export const Admin = sequelize.define(
          allowNull: false,
       },
       refreshToken: {
-         type: DataTypes.STRING(200),
+         type: DataTypes.STRING,
          allowNull: true,
       },
    },
