@@ -3,6 +3,7 @@ import { Nft } from "../models/Nft.js";
 import imgService from "../services/img-service.js";
 import { NftBuy } from "../models/NftBuy.js";
 import { Img } from "../models/Img.js";
+import { sequelize } from "../services/DB.js";
 
 class Controller {
    create = async (req, res) => {
@@ -206,6 +207,56 @@ class Controller {
       } catch (e) {
          console.log(e);
          res.status(500).json(e?.message);
+      }
+   };
+   sendNft = async (req, res) => {
+      try {
+         const { nft } = req.body;
+         const { id } = req.params;
+         console.log(id);
+
+         if (!nft || !id || nft.length === 0)
+            return res.status(400).json("NFT is not found");
+
+         const nftBuyArr = [];
+
+         for (let nftId of nft) {
+            const nftData = await Nft.findOne({
+               where: {
+                  id: nftId,
+                  "$nftBuy.id$": {
+                     [Op.is]: null,
+                  },
+               },
+               include: { model: NftBuy, as: "nftBuy", required: false },
+            });
+
+            if (!nftData) res.status(404).json("NFT is not found");
+            console.log(nftData.days);
+            console.log(nftData);
+
+
+            nftBuyArr.push(
+               NftBuy.build({
+                  user_id: id,
+                  nft_id: nftData.id,
+                  date_end: sequelize.fn(
+                     "DATE_ADD",
+                     sequelize.fn("NOW"),
+                     sequelize.literal(`INTERVAL ${nftData.days} DAY`),
+                  ),
+               })
+            );
+         }
+
+         for (let nftBuy of nftBuyArr) {
+            await nftBuy.save();
+         }
+
+         return res.json(true);
+      } catch (e) {
+         res.status(500).json(e.message);
+         console.log(e);
       }
    };
 }

@@ -7,6 +7,7 @@ import http from "http";
 import AdminRouter from "./routers/AdminRouter.js";
 import NftRouter from "./routers/NftRouter.js";
 import fileUpload from "express-fileupload";
+// import {} from './ModelsCommunication.js'
 
 dotenv.config();
 
@@ -23,7 +24,8 @@ app.use(
       origin: process.env.CLIENT_URL,
    })
 );
-app.use(process.env.NFT_FOLDER, express.static('./'+process.env.NFT_FOLDER));
+
+app.use(process.env.NFT_FOLDER, express.static("./" + process.env.NFT_FOLDER));
 app.use("/User", UserRouter);
 app.use("/Admin", AdminRouter);
 app.use("/Nft", NftRouter);

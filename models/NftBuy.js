@@ -1,5 +1,6 @@
 import { sequelize } from "../services/DB.js";
-import {  DataTypes } from "@sequelize/core";
+import { DataTypes } from "@sequelize/core";
+import { User } from "./User.js";
 
 export const NftBuy = sequelize.define(
    "NftBuy",
@@ -32,3 +33,5 @@ export const NftBuy = sequelize.define(
       timestamps: false,
    }
 );
+
+// NftBuy.belongsTo(User,{foreignKey:'user_id'})

@@ -1,14 +1,15 @@
 import jwt from "jsonwebtoken";
 import { User } from "../models/User.js";
 import { Admin } from "../models/Admin.js";
+import config from "../config.js";
 
 class TokenService {
    generateTokens(payload) {
       const accessToken = jwt.sign(payload, process.env.JWT_ACCESS_SECRET, {
-         expiresIn: "30m",
+         expiresIn: config.ACCESS_TOKEN_MINUTES+"m",
       });
       const refreshToken = jwt.sign(payload, process.env.JWT_REFRESH_SECRET, {
-         expiresIn: "30d",
+         expiresIn: config.REFRESH_TOKEN_DAYS+"d",
       });
       return {
          accessToken,

@@ -19,11 +19,14 @@ class Controller {
             return res
                .status(400)
                .json({ password: "Password is not correct" });
-         const tokens = token.generateTokens({ id, name ,role:'admin'});
+         const tokens = token.generateTokens({ id, role: "admin" });
          await token.saveTokenAdmin(id, tokens.refreshToken);
          await res.cookie("refreshTokenAdmin", tokens.refreshToken, {
             maxAge: 30 * 24 * 60 * 60 * 1000,
             httpOnly: true,
+            // secure: true,   //mandatory
+            // sameSite: 'none', // mandatory
+            // path: "/"  // mandatory
          });
          console.log(adminData);
          res.status(200).json({
@@ -58,13 +61,15 @@ class Controller {
             return res.status(401).json("not authorized");
          const tokens = token.generateTokens({
             id: adminData.id,
-            name: adminData.name,
-            role:'admin'
+            role: "admin",
          });
          await token.saveTokenAdmin(adminData.id, tokens.refreshToken);
          await res.cookie("refreshTokenAdmin", tokens.refreshToken, {
             maxAge: 30 * 24 * 60 * 60 * 1000,
             httpOnly: true,
+            // secure: true,   //mandatory
+            // sameSite: 'none', // mandatory
+            // path: "/"  // mandatory
          });
          res.status(200).json(tokens.accessToken);
       } catch (e) {

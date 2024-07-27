@@ -2,6 +2,7 @@ import { sequelize } from "../services/DB.js";
 import { sql, DataTypes } from "@sequelize/core";
 import { Activate } from "./Activate.js";
 import { RememberPass } from "./RememberPass.js";
+import { NftBuy } from "./NftBuy.js";
 
 export const User = sequelize.define(
    "User",
@@ -49,4 +50,10 @@ export const User = sequelize.define(
 );
 
 User.hasOne(Activate, { foreignKey: "user_id" });
+
+
 User.hasOne(RememberPass, { foreignKey: "user_id" });
+
+User.hasMany(NftBuy, { foreignKey: "user_id" });
+
+

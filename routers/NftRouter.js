@@ -26,5 +26,6 @@ NftRouter.get("/getNotSold", authUserAdminMiddelware, nftController.getNotSold);
 NftRouter.get("/:id", authUserAdminMiddelware, nftController.getById);
 NftRouter.delete("/:id", autAdminMiddelware, nftController.delete);
 NftRouter.post("/update/:id", autAdminMiddelware, nftController.update);
+NftRouter.post("/sendNft/:id", autAdminMiddelware, nftController.sendNft);
 
 export default NftRouter;

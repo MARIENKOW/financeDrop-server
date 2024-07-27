@@ -4,10 +4,13 @@ import mailService from "../services/mail-service.js";
 import token from "../services/token-service.js";
 import { User } from "../models/User.js";
 import { Activate } from "../models/Activate.js";
-import { Op } from "sequelize";
+import { NftBuy } from "../models/NftBuy.js";
+import { Op, Sequelize } from "sequelize";
 import { sequelize } from "../services/DB.js";
 import { RememberPass } from "../models/RememberPass.js";
 import config from "../config.js";
+import { Nft } from "../models/Nft.js";
+import { Img } from "../models/Img.js";
 
 class Controller {
    signIn = async (req, res) => {
@@ -36,11 +39,17 @@ class Controller {
                "root.server": "Account is not activated. check your email",
             });
 
-         const tokens = token.generateTokens({ id: dataValues.id, email,role:'user' });
+         const tokens = token.generateTokens({
+            id: dataValues.id,
+            role: "user",
+         });
          await token.saveTokenUser(dataValues.id, tokens.refreshToken);
          await res.cookie("refreshToken", tokens.refreshToken, {
-            maxAge: 30 * 24 * 60 * 60 * 1000,
+            maxAge: config.REFRESH_TOKEN_DAYS * 24 * 60 * 60 * 1000,
             httpOnly: true,
+            // secure: true,   //mandatory
+            // sameSite: 'none', // mandatory
+            // path: "/"  // mandatory
          });
          res.status(200).json({
             accessToken: tokens.accessToken,
@@ -85,7 +94,7 @@ class Controller {
 
          if (usersToDelete) {
             const usersIdArr = usersToDelete.map((el) => el.id);
-            User.destroy({
+            await User.destroy({
                where: {
                   id: {
                      [Op.in]: usersIdArr,
@@ -127,7 +136,7 @@ class Controller {
                email,
                `${process.env.CLIENT_URL}${config.CLIENT_ACTIVATE_ROUTE}/${activationLink}`
             );
-            const tokens = token.generateTokens({ id, email,role:'user' });
+            const tokens = token.generateTokens({ id, role: "user" });
             await token.saveTokenUser(id, tokens.refreshToken);
          } catch (e) {
             await insertUser.destroy();
@@ -192,13 +201,15 @@ class Controller {
             return res.status(401).json("not authorized user");
          const tokens = token.generateTokens({
             id: userData.id,
-            email: userData.email,
-            role:'user'
+            role: "user",
          });
          await token.saveTokenUser(userData.id, tokens.refreshToken);
          await res.cookie("refreshToken", tokens.refreshToken, {
-            maxAge: 30 * 24 * 60 * 60 * 1000,
+            maxAge: config.REFRESH_TOKEN_DAYS * 24 * 60 * 60 * 1000, //days
             httpOnly: true,
+            // secure: true,   //mandatory
+            // sameSite: 'none', // mandatory
+            // path: "/"  // mandatory
          });
          res.status(200).json(tokens.accessToken);
       } catch (e) {
@@ -300,6 +311,68 @@ class Controller {
          return res.json(true);
       } catch (e) {
          res.status(500).json(e.message);
+      }
+   };
+
+   getAll = async (req, res) => {
+      try {
+         const usersData = await User.findAll({
+            where: {
+               isActivated: 1,
+            },
+            include: {
+               model: Activate,
+               as: "activate",
+               required: false,
+            },
+            attributes: {
+               exclude: ["password", "refreshToken", "isActivated"],
+            },
+         });
+
+         return res.json(usersData);
+      } catch (e) {
+         res.status(500).json(e.message);
+         console.log(e);
+      }
+   };
+
+   getById = async (req, res) => {
+      try {
+         const { id } = req.params;
+         if (!id) return res.status(400).json("id is not found");
+
+         const userData = await User.findOne({
+            where: {
+               isActivated: 1,
+               id,
+            },
+            attributes: {
+               exclude: ["password", "refreshToken", "isActivated"],
+            },
+         });
+
+         if (!userData) return res.status(404).json("Not found User");
+
+         const nft = await NftBuy.findAll({
+            where: { user_id: userData.id },
+            attributes: { exclude: ["user_i", "nft_id", "id"] },
+            include: {
+               model: Nft,
+               required: true,
+               include: {
+                  model: Img,
+                  required: true,
+               },
+            },
+         });
+         const t = userData.dataValues;
+         t.nft = nft;
+
+         return res.json(t);
+      } catch (e) {
+         res.status(500).json(e.message);
+         console.log(e);
       }
    };
 }

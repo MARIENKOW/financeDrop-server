@@ -2,6 +2,8 @@ import { Router, json } from "express";
 import controller from "../controllers/user-controller.js";
 import autUserMiddelware from "../middlewares/authUser-middleware.js";
 import changePassMiddleware from "../middlewares/changePass-middleware.js";
+import authAdminMiddelware from "../middlewares/authAdmin-middleware.js";
+
 
 const UserRouter = new Router();
 
@@ -26,5 +28,9 @@ UserRouter.post(
    changePassMiddleware,
    controller.checkChangePassLink
 );
+
+UserRouter.get("/getAll",authAdminMiddelware, controller.getAll);
+
+UserRouter.get("/:id",authAdminMiddelware, controller.getById);
 
 export default UserRouter;

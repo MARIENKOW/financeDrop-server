@@ -21,3 +21,4 @@ export const sequelize = new Sequelize({
    await sequelize.sync();
    console.log("All models were synchronized successfully");
 })();
+
