@@ -11,6 +11,9 @@ import { RememberPass } from "../models/RememberPass.js";
 import config from "../config.js";
 import { Nft } from "../models/Nft.js";
 import { Img } from "../models/Img.js";
+import { CheckUp } from "../models/CheckUp.js";
+import { NftUp } from "../models/NftUp.js";
+import { OtherUp } from "../models/OtherUp.js";
 
 class Controller {
    signIn = async (req, res) => {
@@ -356,7 +359,8 @@ class Controller {
 
          const nft = await NftBuy.findAll({
             where: { user_id: userData.id },
-            attributes: { exclude: ["user_i", "nft_id", "id"] },
+            order: [["date_end", "asc"]],
+            attributes: { exclude: ["user_i", "nft_id"] },
             include: {
                model: Nft,
                required: true,
@@ -368,6 +372,101 @@ class Controller {
          });
          const t = userData.dataValues;
          t.nft = nft;
+         const nftIdArray = nft?.map((el) => el?.nft?.id) || [];
+
+
+
+
+         
+         const nftUpData = await NftUp.findAll({
+            order: [["date", "desc"]],
+            where: { nft_id: nftIdArray },
+            include: [
+               {
+                  model: CheckUp,
+                  attributes: [],
+                  required: true,
+                  as: "checkUp",
+               },
+               {
+                  model: Nft,
+                  attributes: [],
+                  required: true,
+                  as: "nft",
+               },
+            ],
+            attributes: [
+               "sum",
+               [sequelize.col("checkUp.date"), "date"],
+               [sequelize.col("nft.name"), "nft_name"],
+               [sequelize.col("nft.id"), "nft_id"],
+            ],
+         });
+
+         let nftUpDataFiltered = [];
+
+         for (let { dataValues } of nftUpData) {
+            const nftUpDate = nftUpDataFiltered.find(
+               (el) => el[0] === dataValues?.date
+            );
+            if (!nftUpDate) {
+               nftUpDataFiltered.push([dataValues?.date, [dataValues]]);
+               continue;
+            }
+            nftUpDate[1].push(dataValues);
+         }
+
+         t.nftDeposit = nftUpDataFiltered;
+
+         const nftDepositSum =
+            nftUpData?.reduce((acc, el) => acc + parseFloat(el.sum), 0) || 0;
+
+
+
+
+
+
+
+         const otherUpData = await OtherUp.findAll({
+            where: { user_id: userData.id },
+            order: [["date", "desc"]],
+            exclude: ["user_id"],
+            attributes: ["date", "sum", "id", ["description", "name"]],
+         });
+
+         let otherUpDataFiltered = [];
+
+         for (let { dataValues } of otherUpData) {
+            const otherUpDate = otherUpDataFiltered.find(
+               (el) => el[0] === dataValues?.date
+            );
+            if (!otherUpDate) {
+               otherUpDataFiltered.push([dataValues?.date, [dataValues]]);
+               continue;
+            }
+            otherUpDate[1].push(dataValues);
+         }
+
+         t.otherDeposit = otherUpDataFiltered;
+
+         const otherDepositSum =
+            otherUpData?.reduce((acc, el) => acc + parseFloat(el.sum), 0) || 0;
+
+
+
+
+
+
+         const referralDepositSum = 0;
+
+         t.totalDepositSum = (
+            parseFloat(nftDepositSum) +
+            parseFloat(referralDepositSum) +
+            parseFloat(otherDepositSum)
+         ).toFixed(2);
+         t.nftDepositSum = nftDepositSum.toFixed(2);
+         t.referralDepositSum = referralDepositSum.toFixed(2);
+         t.otherDepositSum = otherDepositSum.toFixed(2);
 
          return res.json(t);
       } catch (e) {

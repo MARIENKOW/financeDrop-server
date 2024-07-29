@@ -1,19 +1,15 @@
 import { sequelize } from "../services/DB.js";
 import { DataTypes } from "@sequelize/core";
 
-export const NftUp = sequelize.define(
-   "NftUp",
+export const OtherUp = sequelize.define(
+   "OtherUp",
    {
       id: {
          type: DataTypes.INTEGER,
          primaryKey: true,
          autoIncrement: true,
       },
-      nft_id: {
-         type: DataTypes.INTEGER,
-         allowNull: false,
-      },
-      checkUp_id: {
+      user_id: {
          type: DataTypes.INTEGER,
          allowNull: false,
       },
@@ -23,13 +19,19 @@ export const NftUp = sequelize.define(
          get() {
             return parseFloat(this.getDataValue("sum")).toFixed(2);
          },
-         // set(value) {
-         //    this.setDataValue("sum", value.toFixed(2));
-         // },
+      },
+      description: {
+         type: DataTypes.STRING,
+         allowNull: false,
+      },
+      date: {
+         type: DataTypes.DATEONLY,
+         allowNull: false,
+         defaultValue: sequelize.fn("CURDATE"),
       },
    },
    {
-      tableName: "nftUp",
+      tableName: "otherUp",
       timestamps: false,
    }
 );

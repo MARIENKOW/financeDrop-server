@@ -1,5 +1,7 @@
 import { sequelize } from "../services/DB.js";
 import {  DataTypes } from "@sequelize/core";
+import { NftBuy } from "./NftBuy.js";
+import { NftUp } from "./NftUp.js";
 
 export const CheckUp = sequelize.define(
    "CheckUp",
@@ -12,6 +14,7 @@ export const CheckUp = sequelize.define(
       date: {
          type: DataTypes.DATEONLY,
          allowNull: false,
+         defaultValue:sequelize.fn("CURDATE")
       },
    },
    {
@@ -19,5 +22,7 @@ export const CheckUp = sequelize.define(
       timestamps: false,
    }
 );
+
+CheckUp.hasOne(NftUp,{foreignKey:'checkUp_id'})
 
 

@@ -1,7 +1,8 @@
 import { sequelize } from "../services/DB.js";
-import {  DataTypes } from "@sequelize/core";
-import {NftBuy} from "./NftBuy.js"
+import { DataTypes } from "@sequelize/core";
+import { NftBuy } from "./NftBuy.js";
 import { User } from "./User.js";
+import { NftUp } from "./NftUp.js";
 
 export const Nft = sequelize.define(
    "Nft",
@@ -16,8 +17,14 @@ export const Nft = sequelize.define(
          allowNull: false,
       },
       price: {
-         type: DataTypes.FLOAT,
+         type: DataTypes.DECIMAL(10, 2),
          allowNull: false,
+         get() {
+            return parseFloat(this.getDataValue("price")).toFixed(2);
+         },
+         // set(value) {
+         //    this.setDataValue("price", value.toFixed(2));
+         // },
       },
       days: {
          type: DataTypes.INTEGER,
@@ -49,3 +56,4 @@ export const Nft = sequelize.define(
 // NftBuy.belongsTo(Nft, { foreignKey: "nft_id", targetKey: "id" });
 // NftBuy.hasOne(Nft, { foreignKey: "id", targetKey: "nft_id" });
 Nft.hasOne(NftBuy, { foreignKey: "nft_id" });
+Nft.hasMany(NftUp, { foreignKey: "nft_id" });

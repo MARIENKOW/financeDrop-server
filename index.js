@@ -8,6 +8,14 @@ import AdminRouter from "./routers/AdminRouter.js";
 import NftRouter from "./routers/NftRouter.js";
 import fileUpload from "express-fileupload";
 // import {} from './ModelsCommunication.js'
+import { CheckUp } from "./models/CheckUp.js";
+import { Op } from "sequelize";
+import { NftBuy } from "./models/NftBuy.js";
+import { NftUp } from "./models/NftUp.js";
+import { sequelize } from "./services/DB.js";
+import { Nft } from "./models/Nft.js";
+import config from "./config.js";
+import OtherUpRouter from "./routers/OtherUpRouter.js";
 
 dotenv.config();
 
@@ -29,6 +37,7 @@ app.use(process.env.NFT_FOLDER, express.static("./" + process.env.NFT_FOLDER));
 app.use("/User", UserRouter);
 app.use("/Admin", AdminRouter);
 app.use("/Nft", NftRouter);
+app.use("/OtherUp", OtherUpRouter);
 
 const web = http.Server(app);
 
@@ -39,3 +48,57 @@ try {
 } catch (e) {
    console.log(`${e.message}`);
 }
+
+const setIntervalFunction = async () => {
+   try {
+      const checkUpDate = await CheckUp.findOne({
+         where: { date: { [Op.gte]: sequelize.fn("CURDATE") } },
+         order: [["date", "desc"]],
+      });
+
+      if (checkUpDate) throw new Error("not correct date");
+
+      const newCheckUp = await CheckUp.create();
+
+      const { id: checkUpId } = newCheckUp;
+
+      const nftData = await Nft.findAll({
+         include: [
+            {
+               model: NftBuy,
+               as: "nftBuy",
+               required: true,
+               where: { active: 1 },
+            },
+         ],
+      });
+
+      if (!nftData) throw new Error("not found NftBuy");
+
+      try {
+         for (let nft of nftData) {
+            await NftUp.create({
+               checkUp_id: checkUpId,
+               sum: nft.price * (nft.percent / 100),
+               nft_id: nft.id,
+            });
+         }
+      } catch (error) {
+         newCheckUp.destroy();
+         throw error;
+      }
+
+      await NftBuy.update(
+         {
+            active: 0,
+         },
+         {
+            where: { date_end: { [Op.lte]: sequelize.fn("CURDATE") } },
+         }
+      );
+   } catch (error) {
+      console.log(error);
+   }
+};
+
+setInterval(setIntervalFunction, config.INTERVAL_FN_HOUR*3600000);

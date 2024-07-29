@@ -1,6 +1,5 @@
 import { sequelize } from "../services/DB.js";
 import { DataTypes } from "@sequelize/core";
-import { User } from "./User.js";
 
 export const NftBuy = sequelize.define(
    "NftBuy",

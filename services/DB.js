@@ -1,7 +1,7 @@
-import mysql from "mysql2/promise";
 import config from "../config.js";
 import { Sequelize } from "@sequelize/core";
 import { MySqlDialect } from "@sequelize/mysql";
+
 const { db } = config;
 export const sequelize = new Sequelize({
    ...db,
@@ -18,7 +18,10 @@ export const sequelize = new Sequelize({
 })();
 
 (async () => {
-   await sequelize.sync();
-   console.log("All models were synchronized successfully");
+   try {
+      await sequelize.sync();
+      console.log("All models were synchronized successfully");
+   } catch (error) {
+      console.log('db sync is not correct');
+   }
 })();
-

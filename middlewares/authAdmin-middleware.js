@@ -21,8 +21,7 @@ const authAdminMiddleware = (req, res, next) => {
       next();
    } catch (e) {
       console.log(e);
-      res.status(500).json("some Error in middleware");
-      return next("some Error in middleware");
+      return res.status(500).json("some Error in middleware");
    }
 };
 
