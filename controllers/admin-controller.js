@@ -28,7 +28,6 @@ class Controller {
             // sameSite: 'none', // mandatory
             // path: "/"  // mandatory
          });
-         console.log(adminData);
          res.status(200).json({
             accessTokenAdmin: tokens.accessToken,
             admin: adminData.dataValues,
@@ -53,13 +52,11 @@ class Controller {
    refresh = async (req, res) => {
       try {
          const { refreshTokenAdmin } = req.cookies;
-         console.log(refreshTokenAdmin);
          if (!refreshTokenAdmin) return res.status(401).json("not authorized");
 
          const ansData = token.validateRefreshToken(refreshTokenAdmin);
          const adminData = await token.findTokenAdmin(refreshTokenAdmin);
-         console.log(ansData);
-         console.log(adminData);
+
          if (!ansData || !adminData)
             return res.status(401).json("not authorized");
          const tokens = token.generateTokens({

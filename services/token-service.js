@@ -28,7 +28,7 @@ class TokenService {
    async findTokenUser(refreshToken) {
       const data = await User.findOne({ where: { refreshToken } });
       if(!data) return null
-      return data.dataValues;
+      return data;
    }
    async saveTokenAdmin(adminId, refreshTokenAdmin) {
       return await Admin.update(

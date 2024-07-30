@@ -4,7 +4,6 @@ import autUserMiddelware from "../middlewares/authUser-middleware.js";
 import changePassMiddleware from "../middlewares/changePass-middleware.js";
 import authAdminMiddelware from "../middlewares/authAdmin-middleware.js";
 
-
 const UserRouter = new Router();
 
 UserRouter.post("/signIn", controller.signIn);
@@ -29,8 +28,14 @@ UserRouter.post(
    controller.checkChangePassLink
 );
 
-UserRouter.get("/getAll",authAdminMiddelware, controller.getAll);
+UserRouter.get("/getAll", authAdminMiddelware, controller.getAll);
 
-UserRouter.get("/:id",authAdminMiddelware, controller.getById);
+UserRouter.get("/:id", authAdminMiddelware, controller.getById);
+
+UserRouter.post(
+   "/other-deposit/create",
+   authAdminMiddelware,
+   controller.createOtherDeposit
+);
 
 export default UserRouter;

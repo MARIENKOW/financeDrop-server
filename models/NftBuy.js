@@ -32,5 +32,3 @@ export const NftBuy = sequelize.define(
       timestamps: false,
    }
 );
-
-// NftBuy.belongsTo(User,{foreignKey:'user_id'})

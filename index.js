@@ -7,15 +7,14 @@ import http from "http";
 import AdminRouter from "./routers/AdminRouter.js";
 import NftRouter from "./routers/NftRouter.js";
 import fileUpload from "express-fileupload";
-// import {} from './ModelsCommunication.js'
 import { CheckUp } from "./models/CheckUp.js";
 import { Op } from "sequelize";
 import { NftBuy } from "./models/NftBuy.js";
-import { NftUp } from "./models/NftUp.js";
 import { sequelize } from "./services/DB.js";
 import { Nft } from "./models/Nft.js";
 import config from "./config.js";
-import OtherUpRouter from "./routers/OtherUpRouter.js";
+import { User } from "./models/User.js";
+import { Event } from "./models/Event.js";
 
 dotenv.config();
 
@@ -37,7 +36,6 @@ app.use(process.env.NFT_FOLDER, express.static("./" + process.env.NFT_FOLDER));
 app.use("/User", UserRouter);
 app.use("/Admin", AdminRouter);
 app.use("/Nft", NftRouter);
-app.use("/OtherUp", OtherUpRouter);
 
 const web = http.Server(app);
 
@@ -60,7 +58,7 @@ const setIntervalFunction = async () => {
 
       const newCheckUp = await CheckUp.create();
 
-      const { id: checkUpId } = newCheckUp;
+      const { id: checkUp_id } = newCheckUp;
 
       const nftData = await Nft.findAll({
          include: [
@@ -77,11 +75,21 @@ const setIntervalFunction = async () => {
 
       try {
          for (let nft of nftData) {
-            await NftUp.create({
-               checkUp_id: checkUpId,
-               sum: nft.price * (nft.percent / 100),
-               nft_id: nft.id,
+            const sum = nft.price * (nft.percent / 100);
+            await Event.create({
+               name: nft?.name,
+               deposit_type: 1,
+               user_id: nft?.nftBuy?.user_id,
+               sum,
+               checkUp_id,
             });
+
+            const { nftDeposit, id } = await nft?.nftBuy.getUser();
+
+            User.update(
+               { nftDeposit: (parseFloat(nftDeposit) + sum).toFixed(2) },
+               { where: { id } }
+            );
          }
       } catch (error) {
          newCheckUp.destroy();
@@ -101,4 +109,6 @@ const setIntervalFunction = async () => {
    }
 };
 
-setInterval(setIntervalFunction, config.INTERVAL_FN_HOUR*3600000);
+setIntervalFunction();
+
+setInterval(setIntervalFunction, config.INTERVAL_FN_HOUR * 3600000);

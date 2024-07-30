@@ -17,7 +17,7 @@ class ImgService {
       await this.moveFile(img,imgName);
 
       try {
-         const {id:img_id} = await Img.create({name:imgName,path:process.env.API_URL+process.env.NFT_FOLDER+"/"+imgName})
+         const {id:img_id} = await Img.create({name:imgName,path:process.env.NFT_FOLDER+"/"+imgName})
          return {img_id,imgName}
       } catch (error) {
          await this.unlinkFile(imgName)

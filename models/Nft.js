@@ -1,8 +1,6 @@
 import { sequelize } from "../services/DB.js";
 import { DataTypes } from "@sequelize/core";
 import { NftBuy } from "./NftBuy.js";
-import { User } from "./User.js";
-import { NftUp } from "./NftUp.js";
 
 export const Nft = sequelize.define(
    "Nft",
@@ -53,7 +51,4 @@ export const Nft = sequelize.define(
    }
 );
 
-// NftBuy.belongsTo(Nft, { foreignKey: "nft_id", targetKey: "id" });
-// NftBuy.hasOne(Nft, { foreignKey: "id", targetKey: "nft_id" });
 Nft.hasOne(NftBuy, { foreignKey: "nft_id" });
-Nft.hasMany(NftUp, { foreignKey: "nft_id" });

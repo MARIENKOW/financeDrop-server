@@ -5,15 +5,15 @@ import token from "../services/token-service.js";
 import { User } from "../models/User.js";
 import { Activate } from "../models/Activate.js";
 import { NftBuy } from "../models/NftBuy.js";
-import { Op, Sequelize } from "sequelize";
+import { Op } from "sequelize";
 import { sequelize } from "../services/DB.js";
 import { RememberPass } from "../models/RememberPass.js";
 import config from "../config.js";
 import { Nft } from "../models/Nft.js";
 import { Img } from "../models/Img.js";
 import { CheckUp } from "../models/CheckUp.js";
-import { NftUp } from "../models/NftUp.js";
-import { OtherUp } from "../models/OtherUp.js";
+import { Event } from "../models/Event.js";
+import eventService from "../services/event-service.js";
 
 class Controller {
    signIn = async (req, res) => {
@@ -23,13 +23,12 @@ class Controller {
          if (!email || !password)
             return res.status(400).json({ "root.server": "Incorrect values" });
 
-         const data = await User.findOne({ where: { email } });
+         const userData = await User.findOne({ where: { email } });
 
-         if (!data)
+         if (!userData)
             return res.status(400).json({ email: "Email is not defined" });
 
-         const { dataValues } = data;
-         const dbPass = dataValues.password;
+         const dbPass = userData.password;
          const isPassEquals = await bcrypt.compare(password, dbPass);
 
          if (!isPassEquals)
@@ -37,16 +36,16 @@ class Controller {
                .status(400)
                .json({ password: "Password is not correct" });
 
-         if (!dataValues.isActivated)
+         if (!userData.isActivated)
             return res.status(400).json({
                "root.server": "Account is not activated. check your email",
             });
 
          const tokens = token.generateTokens({
-            id: dataValues.id,
+            id: userData.id,
             role: "user",
          });
-         await token.saveTokenUser(dataValues.id, tokens.refreshToken);
+         await token.saveTokenUser(userData.id, tokens.refreshToken);
          await res.cookie("refreshToken", tokens.refreshToken, {
             maxAge: config.REFRESH_TOKEN_DAYS * 24 * 60 * 60 * 1000,
             httpOnly: true,
@@ -54,9 +53,71 @@ class Controller {
             // sameSite: 'none', // mandatory
             // path: "/"  // mandatory
          });
+
+         //!-------------------------------------------------------------------
+
+         const nft = await NftBuy.findAll({
+            where: { user_id: userData.id },
+            order: [["date_end", "asc"]],
+            attributes: { exclude: ["user_i", "nft_id"] },
+            include: {
+               model: Nft,
+               required: true,
+               include: {
+                  model: Img,
+                  required: true,
+               },
+            },
+         });
+         const t = userData.dataValues;
+         t.nft = nft;
+         t.totalDeposit = userData.totalDeposit;
+
+         const nftDepositEvents = await Event.findAll({
+            where: { user_id: userData.id, deposit_type: 1 },
+            order: [["date", "desc"]],
+            include: {
+               model: CheckUp,
+               attributes: [],
+               required: true,
+               as: "checkUp",
+            },
+            attributes: [
+               "sum",
+               [sequelize.col("checkUp.date"), "date"],
+               "name",
+               "increment",
+            ],
+         });
+
+         t.nftDepositEvents = eventService.filterEvent(nftDepositEvents);
+
+         const otherDepositEvents = await Event.findAll({
+            where: { user_id: userData.id, deposit_type: 3 },
+            order: [
+               ["date", "desc"],
+               ["id", "desc"],
+            ],
+            include: {
+               model: CheckUp,
+               attributes: [],
+               required: true,
+               as: "checkUp",
+            },
+            attributes: [
+               "sum",
+               [sequelize.col("checkUp.date"), "date"],
+               "name",
+               "increment",
+               "id",
+            ],
+         });
+
+         t.otherDepositEvents = eventService.filterEvent(otherDepositEvents);
+
          res.status(200).json({
             accessToken: tokens.accessToken,
-            user: dataValues,
+            user: t,
          });
       } catch (e) {
          console.log(e);
@@ -229,7 +290,66 @@ class Controller {
          const ansData = token.validateRefreshToken(refreshToken);
          if (!ansData || !userData)
             return res.status(401).json("not Authorization");
-         return res.json(userData);
+
+         const nft = await NftBuy.findAll({
+            where: { user_id: userData.id },
+            order: [["date_end", "asc"]],
+            attributes: { exclude: ["user_i", "nft_id"] },
+            include: {
+               model: Nft,
+               required: true,
+               include: {
+                  model: Img,
+                  required: true,
+               },
+            },
+         });
+         const t = userData.dataValues;
+         t.nft = nft;
+         t.totalDeposit = userData.totalDeposit;
+
+         const nftDepositEvents = await Event.findAll({
+            where: { user_id: userData.id, deposit_type: 1 },
+            order: [["date", "desc"]],
+            include: {
+               model: CheckUp,
+               attributes: [],
+               required: true,
+               as: "checkUp",
+            },
+            attributes: [
+               "sum",
+               [sequelize.col("checkUp.date"), "date"],
+               "name",
+               "increment",
+            ],
+         });
+
+         t.nftDepositEvents = eventService.filterEvent(nftDepositEvents);
+
+         const otherDepositEvents = await Event.findAll({
+            where: { user_id: userData.id, deposit_type: 3 },
+            order: [
+               ["date", "desc"],
+               ["id", "desc"],
+            ],
+            include: {
+               model: CheckUp,
+               attributes: [],
+               required: true,
+               as: "checkUp",
+            },
+            attributes: [
+               "sum",
+               [sequelize.col("checkUp.date"), "date"],
+               "name",
+               "increment",
+               "id",
+            ],
+         });
+
+         t.otherDepositEvents = eventService.filterEvent(otherDepositEvents);
+         return res.json(t);
       } catch (e) {
          res.status(500).json(e.message);
          console.log(e);
@@ -259,7 +379,6 @@ class Controller {
             },
          });
 
-         console.log(rememberPassData);
          if (rememberPassData)
             return res.status(400).json({
                "root.server": "The password reset email has already been send.",
@@ -372,106 +491,97 @@ class Controller {
          });
          const t = userData.dataValues;
          t.nft = nft;
-         const nftIdArray = nft?.map((el) => el?.nft?.id) || [];
+         t.totalDeposit = userData.totalDeposit;
 
-
-
-
-         
-         const nftUpData = await NftUp.findAll({
+         const nftDepositEvents = await Event.findAll({
+            where: { user_id: userData.id, deposit_type: 1 },
             order: [["date", "desc"]],
-            where: { nft_id: nftIdArray },
-            include: [
-               {
-                  model: CheckUp,
-                  attributes: [],
-                  required: true,
-                  as: "checkUp",
-               },
-               {
-                  model: Nft,
-                  attributes: [],
-                  required: true,
-                  as: "nft",
-               },
-            ],
+            include: {
+               model: CheckUp,
+               attributes: [],
+               required: true,
+               as: "checkUp",
+            },
             attributes: [
                "sum",
                [sequelize.col("checkUp.date"), "date"],
-               [sequelize.col("nft.name"), "nft_name"],
-               [sequelize.col("nft.id"), "nft_id"],
+               "name",
+               "increment",
             ],
          });
 
-         let nftUpDataFiltered = [];
+         t.nftDepositEvents = eventService.filterEvent(nftDepositEvents);
 
-         for (let { dataValues } of nftUpData) {
-            const nftUpDate = nftUpDataFiltered.find(
-               (el) => el[0] === dataValues?.date
-            );
-            if (!nftUpDate) {
-               nftUpDataFiltered.push([dataValues?.date, [dataValues]]);
-               continue;
-            }
-            nftUpDate[1].push(dataValues);
-         }
-
-         t.nftDeposit = nftUpDataFiltered;
-
-         const nftDepositSum =
-            nftUpData?.reduce((acc, el) => acc + parseFloat(el.sum), 0) || 0;
-
-
-
-
-
-
-
-         const otherUpData = await OtherUp.findAll({
-            where: { user_id: userData.id },
-            order: [["date", "desc"]],
-            exclude: ["user_id"],
-            attributes: ["date", "sum", "id", ["description", "name"]],
+         const otherDepositEvents = await Event.findAll({
+            where: { user_id: userData.id, deposit_type: 3 },
+            order: [
+               ["date", "desc"],
+               ["id", "desc"],
+            ],
+            include: {
+               model: CheckUp,
+               attributes: [],
+               required: true,
+               as: "checkUp",
+            },
+            attributes: [
+               "sum",
+               [sequelize.col("checkUp.date"), "date"],
+               "name",
+               "increment",
+               "id",
+            ],
          });
 
-         let otherUpDataFiltered = [];
-
-         for (let { dataValues } of otherUpData) {
-            const otherUpDate = otherUpDataFiltered.find(
-               (el) => el[0] === dataValues?.date
-            );
-            if (!otherUpDate) {
-               otherUpDataFiltered.push([dataValues?.date, [dataValues]]);
-               continue;
-            }
-            otherUpDate[1].push(dataValues);
-         }
-
-         t.otherDeposit = otherUpDataFiltered;
-
-         const otherDepositSum =
-            otherUpData?.reduce((acc, el) => acc + parseFloat(el.sum), 0) || 0;
-
-
-
-
-
-
-         const referralDepositSum = 0;
-
-         t.totalDepositSum = (
-            parseFloat(nftDepositSum) +
-            parseFloat(referralDepositSum) +
-            parseFloat(otherDepositSum)
-         ).toFixed(2);
-         t.nftDepositSum = nftDepositSum.toFixed(2);
-         t.referralDepositSum = referralDepositSum.toFixed(2);
-         t.otherDepositSum = otherDepositSum.toFixed(2);
+         t.otherDepositEvents = eventService.filterEvent(otherDepositEvents);
 
          return res.json(t);
       } catch (e) {
          res.status(500).json(e.message);
          console.log(e);
+      }
+   };
+   createOtherDeposit = async (req, res) => {
+      try {
+         const { sum, description, user_id } = req.body;
+
+         if (!sum || !description || !user_id)
+            return res.status(400).json({ "root.server": "Incorrect values" });
+
+         const { id: checkUp_id } = await CheckUp.findOne({
+            order: [["date", "desc"]],
+         });
+
+         const { otherDeposit, id } = await User.findOne({
+            where: { id: user_id },
+         });
+
+         const eventData = await Event.create({
+            sum,
+            name: description,
+            user_id,
+            checkUp_id,
+            deposit_type: 3,
+         });
+         console.log(parseFloat(otherDeposit), sum);
+         try {
+            await User.update(
+               {
+                  otherDeposit: (
+                     parseFloat(otherDeposit) + parseFloat(sum)
+                  ).toFixed(2),
+               },
+               { where: { id } }
+            );
+         } catch (error) {
+            await eventData.destroy();
+            throw error;
+         }
+
+         res.status(200).json(true);
+      } catch (e) {
+         console.log(e);
+         res.status(500).json(e?.message);
       }
    };
 }

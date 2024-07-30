@@ -1,7 +1,6 @@
 import token from "../services/token-service.js";
 
 const authMiddleware = (req, res, next) => {
-   console.log("user");
 
    try {
       const authorizationHeader = req.headers.authorization;

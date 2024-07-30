@@ -18,6 +18,9 @@ export const Img = sequelize.define(
       path: {
          type: DataTypes.STRING,
          allowNull: false,
+         get() {
+            return process.env.API_URL+this.getDataValue("path");
+         },
       }
    },
    {

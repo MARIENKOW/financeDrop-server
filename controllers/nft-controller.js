@@ -65,7 +65,6 @@ class Controller {
                },
             ],
          });
-         console.log(nftData);
          return res.status(200).json(nftData);
       } catch (e) {
          console.log(e);
@@ -213,7 +212,6 @@ class Controller {
       try {
          const { nft } = req.body;
          const { id } = req.params;
-         console.log(id);
 
          if (!nft || !id || nft.length === 0)
             return res.status(400).json("NFT is not found");
@@ -232,9 +230,6 @@ class Controller {
             });
 
             if (!nftData) res.status(404).json("NFT is not found");
-            console.log(nftData.days);
-            console.log(nftData);
-
 
             nftBuyArr.push(
                NftBuy.build({
@@ -243,7 +238,7 @@ class Controller {
                   date_end: sequelize.fn(
                      "DATE_ADD",
                      sequelize.fn("NOW"),
-                     sequelize.literal(`INTERVAL ${nftData.days} DAY`),
+                     sequelize.literal(`INTERVAL ${nftData.days} DAY`)
                   ),
                })
             );
