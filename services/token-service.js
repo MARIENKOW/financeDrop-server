@@ -2,14 +2,15 @@ import jwt from "jsonwebtoken";
 import { User } from "../models/User.js";
 import { Admin } from "../models/Admin.js";
 import config from "../config.js";
+import { Img } from "../models/Img.js";
 
 class TokenService {
    generateTokens(payload) {
       const accessToken = jwt.sign(payload, process.env.JWT_ACCESS_SECRET, {
-         expiresIn: config.ACCESS_TOKEN_MINUTES+"m",
+         expiresIn: config.ACCESS_TOKEN_MINUTES + "m",
       });
       const refreshToken = jwt.sign(payload, process.env.JWT_REFRESH_SECRET, {
-         expiresIn: config.REFRESH_TOKEN_DAYS+"d",
+         expiresIn: config.REFRESH_TOKEN_DAYS + "d",
       });
       return {
          accessToken,
@@ -26,8 +27,11 @@ class TokenService {
       );
    }
    async findTokenUser(refreshToken) {
-      const data = await User.findOne({ where: { refreshToken } });
-      if(!data) return null
+      const data = await User.findOne({
+         where: { refreshToken },
+         include: Img,
+      });
+      if (!data) return null;
       return data;
    }
    async saveTokenAdmin(adminId, refreshTokenAdmin) {
@@ -46,7 +50,7 @@ class TokenService {
       const data = await Admin.findOne({
          where: { refreshToken: refreshTokenAdmin },
       });
-      if(!data) return null
+      if (!data) return null;
       return data.dataValues;
    }
    validateAccessToken(token) {

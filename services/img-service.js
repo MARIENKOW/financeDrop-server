@@ -4,7 +4,7 @@ import { Img } from "../models/Img.js";
 import { unlink } from "fs";
 import path from "path";
 
-export const nftImageFolder = "/uploads/nft";
+// export const nftImageFolder = "/uploads";
 
 class ImgService {
    

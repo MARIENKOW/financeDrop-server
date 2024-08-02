@@ -4,6 +4,7 @@ import { Activate } from "./Activate.js";
 import { RememberPass } from "./RememberPass.js";
 import { NftBuy } from "./NftBuy.js";
 import { Event } from "./Event.js";
+import { ChangePass } from "./ChangePass.js";
 
 export const User = sequelize.define(
    "User",
@@ -45,21 +46,21 @@ export const User = sequelize.define(
       },
       nftDeposit: {
          type: DataTypes.DECIMAL(10, 2),
-         allowNull: false,
+         allowNull: true,
          get() {
             return parseFloat(this.getDataValue("nftDeposit")).toFixed(2);
          },
       },
       referralDeposit: {
          type: DataTypes.DECIMAL(10, 2),
-         allowNull: false,
+         allowNull: true,
          get() {
             return parseFloat(this.getDataValue("referralDeposit")).toFixed(2);
          },
       },
       otherDeposit: {
          type: DataTypes.DECIMAL(10, 2),
-         allowNull: false,
+         allowNull: true,
          get() {
             return parseFloat(this.getDataValue("otherDeposit")).toFixed(2);
          },
@@ -74,6 +75,15 @@ export const User = sequelize.define(
             ).toFixed(2);
          },
       },
+      img_id: {
+         type: DataTypes.INTEGER,
+         allowNull: true,
+         defaultValue:null
+      },
+      addressMatic: {
+         type: DataTypes.STRING,
+         allowNull: true,
+      },
    },
    {
       tableName: "user",
@@ -84,6 +94,8 @@ export const User = sequelize.define(
 User.hasOne(Activate, { foreignKey: "user_id" });
 
 User.hasOne(RememberPass, { foreignKey: "user_id" });
+
+User.hasOne(ChangePass, { foreignKey: "user_id" });
 
 User.hasMany(NftBuy, { foreignKey: "user_id" });
 

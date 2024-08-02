@@ -15,6 +15,9 @@ import { Nft } from "./models/Nft.js";
 import config from "./config.js";
 import { User } from "./models/User.js";
 import { Event } from "./models/Event.js";
+import { Referral } from "./models/Referral.js";
+import { Site } from "./models/Site.js";
+import SiteRouter from "./routers/SiteRouter.js";
 
 dotenv.config();
 
@@ -34,6 +37,7 @@ app.use(
 
 app.use(process.env.NFT_FOLDER, express.static("./" + process.env.NFT_FOLDER));
 app.use("/User", UserRouter);
+app.use("/", SiteRouter);
 app.use("/Admin", AdminRouter);
 app.use("/Nft", NftRouter);
 
@@ -84,9 +88,43 @@ const setIntervalFunction = async () => {
                checkUp_id,
             });
 
-            const { nftDeposit, id } = await nft?.nftBuy.getUser();
+            const { nftDeposit, id, username } = await nft?.nftBuy.getUser();
 
-            User.update(
+            const referralData = await Referral.findOne({
+               where: { to_id: id },
+            });
+
+            if (referralData) {
+               const { from_id } = referralData;
+
+               const fromUserData = await User.findOne({
+                  where: { id: from_id },
+               });
+
+               if (fromUserData) {
+                  const { referralPercent } = Site.findOne();
+
+                  const referralSum = sum * (referralPercent / 100);
+                  await Event.create({
+                     name: "@" + username,
+                     deposit_type: 2,
+                     user_id: fromUserData?.id,
+                     sum: referralSum,
+                     checkUp_id,
+                  });
+                  await User.update(
+                     {
+                        referralDeposit: (
+                           parseFloat(fromUserData?.referralDeposit) +
+                           referralSum
+                        ).toFixed(2),
+                     },
+                     { where: { id: fromUserData?.id } }
+                  );
+               }
+            }
+
+            await User.update(
                { nftDeposit: (parseFloat(nftDeposit) + sum).toFixed(2) },
                { where: { id } }
             );

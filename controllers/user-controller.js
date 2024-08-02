@@ -4,16 +4,17 @@ import mailService from "../services/mail-service.js";
 import token from "../services/token-service.js";
 import { User } from "../models/User.js";
 import { Activate } from "../models/Activate.js";
-import { NftBuy } from "../models/NftBuy.js";
 import { Op } from "sequelize";
 import { sequelize } from "../services/DB.js";
 import { RememberPass } from "../models/RememberPass.js";
 import config from "../config.js";
-import { Nft } from "../models/Nft.js";
 import { Img } from "../models/Img.js";
 import { CheckUp } from "../models/CheckUp.js";
-import { Event } from "../models/Event.js";
-import eventService from "../services/event-service.js";
+import { depositTypes, Event } from "../models/Event.js";
+import imgService from "../services/img-service.js";
+import userService from "../services/user-service.js";
+import { ChangePass } from "../models/ChangePass.js";
+import { Referral } from "../models/Referral.js";
 
 class Controller {
    signIn = async (req, res) => {
@@ -23,7 +24,10 @@ class Controller {
          if (!email || !password)
             return res.status(400).json({ "root.server": "Incorrect values" });
 
-         const userData = await User.findOne({ where: { email } });
+         const userData = await User.findOne({
+            where: { email },
+            include: Img,
+         });
 
          if (!userData)
             return res.status(400).json({ email: "Email is not defined" });
@@ -54,70 +58,11 @@ class Controller {
             // path: "/"  // mandatory
          });
 
-         //!-------------------------------------------------------------------
-
-         const nft = await NftBuy.findAll({
-            where: { user_id: userData.id },
-            order: [["date_end", "asc"]],
-            attributes: { exclude: ["user_i", "nft_id"] },
-            include: {
-               model: Nft,
-               required: true,
-               include: {
-                  model: Img,
-                  required: true,
-               },
-            },
-         });
-         const t = userData.dataValues;
-         t.nft = nft;
-         t.totalDeposit = userData.totalDeposit;
-
-         const nftDepositEvents = await Event.findAll({
-            where: { user_id: userData.id, deposit_type: 1 },
-            order: [["date", "desc"]],
-            include: {
-               model: CheckUp,
-               attributes: [],
-               required: true,
-               as: "checkUp",
-            },
-            attributes: [
-               "sum",
-               [sequelize.col("checkUp.date"), "date"],
-               "name",
-               "increment",
-            ],
-         });
-
-         t.nftDepositEvents = eventService.filterEvent(nftDepositEvents);
-
-         const otherDepositEvents = await Event.findAll({
-            where: { user_id: userData.id, deposit_type: 3 },
-            order: [
-               ["date", "desc"],
-               ["id", "desc"],
-            ],
-            include: {
-               model: CheckUp,
-               attributes: [],
-               required: true,
-               as: "checkUp",
-            },
-            attributes: [
-               "sum",
-               [sequelize.col("checkUp.date"), "date"],
-               "name",
-               "increment",
-               "id",
-            ],
-         });
-
-         t.otherDepositEvents = eventService.filterEvent(otherDepositEvents);
+         const userFullInfo = await userService.fullInfo(userData);
 
          res.status(200).json({
             accessToken: tokens.accessToken,
-            user: t,
+            user: userFullInfo,
          });
       } catch (e) {
          console.log(e);
@@ -127,7 +72,8 @@ class Controller {
 
    signUp = async (req, res) => {
       try {
-         const { username, name, email, password, rePassword } = req.body;
+         const { username, name, email, password, rePassword, referralToken } =
+            req.body;
 
          if (
             !username ||
@@ -192,6 +138,15 @@ class Controller {
          const { id } = insertUser;
 
          try {
+            const fromUser = await User.findOne({
+               where: { uuid: referralToken },
+            });
+
+            if (fromUser) {
+               const { id: from_id } = fromUser;
+               await Referral.create({ to_id: id, from_id });
+            }
+
             await Activate.create({
                user_id: id,
                token: activationLink,
@@ -291,65 +246,9 @@ class Controller {
          if (!ansData || !userData)
             return res.status(401).json("not Authorization");
 
-         const nft = await NftBuy.findAll({
-            where: { user_id: userData.id },
-            order: [["date_end", "asc"]],
-            attributes: { exclude: ["user_i", "nft_id"] },
-            include: {
-               model: Nft,
-               required: true,
-               include: {
-                  model: Img,
-                  required: true,
-               },
-            },
-         });
-         const t = userData.dataValues;
-         t.nft = nft;
-         t.totalDeposit = userData.totalDeposit;
+         const userFullInfo = await userService.fullInfo(userData);
 
-         const nftDepositEvents = await Event.findAll({
-            where: { user_id: userData.id, deposit_type: 1 },
-            order: [["date", "desc"]],
-            include: {
-               model: CheckUp,
-               attributes: [],
-               required: true,
-               as: "checkUp",
-            },
-            attributes: [
-               "sum",
-               [sequelize.col("checkUp.date"), "date"],
-               "name",
-               "increment",
-            ],
-         });
-
-         t.nftDepositEvents = eventService.filterEvent(nftDepositEvents);
-
-         const otherDepositEvents = await Event.findAll({
-            where: { user_id: userData.id, deposit_type: 3 },
-            order: [
-               ["date", "desc"],
-               ["id", "desc"],
-            ],
-            include: {
-               model: CheckUp,
-               attributes: [],
-               required: true,
-               as: "checkUp",
-            },
-            attributes: [
-               "sum",
-               [sequelize.col("checkUp.date"), "date"],
-               "name",
-               "increment",
-               "id",
-            ],
-         });
-
-         t.otherDepositEvents = eventService.filterEvent(otherDepositEvents);
-         return res.json(t);
+         return res.json(userFullInfo);
       } catch (e) {
          res.status(500).json(e.message);
          console.log(e);
@@ -417,9 +316,10 @@ class Controller {
          const hashPassword = await bcrypt.hash(password, 5);
 
          await User.update(
-            { password: hashPassword },
+            { password: hashPassword, refreshToken: null },
             { where: { id: req.user_id } }
          );
+
          await RememberPass.destroy({ where: { user_id: req.user_id } });
          res.json(true);
       } catch (e) {
@@ -442,11 +342,14 @@ class Controller {
             where: {
                isActivated: 1,
             },
-            include: {
-               model: Activate,
-               as: "activate",
-               required: false,
-            },
+            include: [
+               {
+                  model: Activate,
+                  as: "activate",
+                  required: false,
+               },
+               { model: Img, as: "img", required: false },
+            ],
             attributes: {
                exclude: ["password", "refreshToken", "isActivated"],
             },
@@ -472,70 +375,14 @@ class Controller {
             attributes: {
                exclude: ["password", "refreshToken", "isActivated"],
             },
+            include: Img,
          });
 
          if (!userData) return res.status(404).json("Not found User");
 
-         const nft = await NftBuy.findAll({
-            where: { user_id: userData.id },
-            order: [["date_end", "asc"]],
-            attributes: { exclude: ["user_i", "nft_id"] },
-            include: {
-               model: Nft,
-               required: true,
-               include: {
-                  model: Img,
-                  required: true,
-               },
-            },
-         });
-         const t = userData.dataValues;
-         t.nft = nft;
-         t.totalDeposit = userData.totalDeposit;
+         const userFullInfo = await userService.fullInfo(userData);
 
-         const nftDepositEvents = await Event.findAll({
-            where: { user_id: userData.id, deposit_type: 1 },
-            order: [["date", "desc"]],
-            include: {
-               model: CheckUp,
-               attributes: [],
-               required: true,
-               as: "checkUp",
-            },
-            attributes: [
-               "sum",
-               [sequelize.col("checkUp.date"), "date"],
-               "name",
-               "increment",
-            ],
-         });
-
-         t.nftDepositEvents = eventService.filterEvent(nftDepositEvents);
-
-         const otherDepositEvents = await Event.findAll({
-            where: { user_id: userData.id, deposit_type: 3 },
-            order: [
-               ["date", "desc"],
-               ["id", "desc"],
-            ],
-            include: {
-               model: CheckUp,
-               attributes: [],
-               required: true,
-               as: "checkUp",
-            },
-            attributes: [
-               "sum",
-               [sequelize.col("checkUp.date"), "date"],
-               "name",
-               "increment",
-               "id",
-            ],
-         });
-
-         t.otherDepositEvents = eventService.filterEvent(otherDepositEvents);
-
-         return res.json(t);
+         return res.json(userFullInfo);
       } catch (e) {
          res.status(500).json(e.message);
          console.log(e);
@@ -582,6 +429,274 @@ class Controller {
       } catch (e) {
          console.log(e);
          res.status(500).json(e?.message);
+      }
+   };
+   cashOut = async (req, res) => {
+      try {
+         const { sum, description, deposit_type, user_id } = req.body;
+
+         console.log(sum, user_id, deposit_type);
+
+         if (!sum || !user_id || !deposit_type)
+            return res.status(400).json({ "root.server": "Incorrect values" });
+
+         const { id: checkUp_id } = await CheckUp.findOne({
+            order: [["date", "desc"]],
+         });
+
+         const userData = await User.findOne({
+            where: { id: user_id },
+         });
+
+         if (!userData)
+            return res.status(400).json({ "root.server": "User is not found" });
+
+         const { [depositTypes[deposit_type]]: deposit, id } = userData;
+
+         const newDepositSum = parseFloat(deposit) - parseFloat(sum);
+
+         if (newDepositSum < 0)
+            return res.status(400).json({ sum: "not enough money on deposit" });
+
+         const eventData = await Event.create({
+            sum,
+            name: description ? `cash out: ${description}` : "cash out",
+            user_id: id,
+            checkUp_id,
+            deposit_type,
+            increment: 0,
+         });
+
+         try {
+            await User.update(
+               {
+                  [depositTypes[deposit_type]]: newDepositSum.toFixed(2),
+               },
+               { where: { id } }
+            );
+         } catch (error) {
+            await eventData.destroy();
+            throw error;
+         }
+
+         res.status(200).json(true);
+      } catch (e) {
+         console.log(e);
+         res.status(500).json(e?.message);
+      }
+   };
+   deleteImgSettings = async (req, res) => {
+      try {
+         const { img_id, id } = await User.findOne({
+            where: { id: req?.user?.id },
+         });
+
+         await imgService.delete(img_id);
+
+         const userData = await User.findOne({ where: { id }, include: Img });
+
+         const userFullInfo = await userService.fullInfo(userData);
+
+         res.status(200).json(userFullInfo);
+      } catch (e) {
+         console.log(e);
+         res.status(500).json(e?.message);
+      }
+   };
+   createImgSettings = async (req, res) => {
+      try {
+         const img = req.files.img;
+
+         if (!img)
+            return res.status(400).json({ "root.server": "Incorrect values" });
+
+         const { img_id } = await imgService.save(img);
+
+         await User.update({ img_id }, { where: { id: req?.user?.id } });
+
+         const userData = await User.findOne({
+            where: { id: req?.user?.id },
+            include: Img,
+         });
+
+         const userFullInfo = await userService.fullInfo(userData);
+
+         res.status(200).json(userFullInfo);
+      } catch (e) {
+         console.log(e);
+         res.status(500).json(e?.message);
+      }
+   };
+   updateName = async (req, res) => {
+      try {
+         const { name } = req.body;
+
+         if (!name)
+            return res.status(400).json({ "root.server": "Incorrect values" });
+
+         await User.update({ name }, { where: { id: req?.user?.id } });
+
+         const userData = await User.findOne({
+            where: { id: req?.user?.id },
+            include: Img,
+         });
+
+         const userFullInfo = await userService.fullInfo(userData);
+
+         res.status(200).json(userFullInfo);
+      } catch (e) {
+         console.log(e);
+         res.status(500).json(e?.message);
+      }
+   };
+   updateAddressMatic = async (req, res) => {
+      try {
+         const { addressMatic } = req.body;
+
+         if (!addressMatic)
+            return res.status(400).json({ "root.server": "Incorrect values" });
+
+         await User.update({ addressMatic }, { where: { id: req?.user?.id } });
+
+         const userData = await User.findOne({
+            where: { id: req?.user?.id },
+            include: Img,
+         });
+
+         const userFullInfo = await userService.fullInfo(userData);
+
+         res.status(200).json(userFullInfo);
+      } catch (e) {
+         console.log(e);
+         res.status(500).json(e?.message);
+      }
+   };
+   updateUsername = async (req, res) => {
+      try {
+         const { username } = req.body;
+
+         if (!username)
+            return res.status(400).json({ "root.server": "Incorrect values" });
+
+         const userDataDublicat = await User.findOne({
+            where: { username },
+         });
+
+         if (userDataDublicat)
+            return res
+               .status(400)
+               .json({ username: "Username is already taken" });
+
+         await User.update({ username }, { where: { id: req?.user?.id } });
+
+         const userData = await User.findOne({
+            where: { id: req?.user?.id },
+            include: Img,
+         });
+
+         const userFullInfo = await userService.fullInfo(userData);
+
+         res.status(200).json(userFullInfo);
+      } catch (e) {
+         console.log(e);
+         res.status(500).json(e?.message);
+      }
+   };
+   changePassSettings = async (req, res, user_id) => {
+      try {
+         const { password, rePassword, currentPassword } = req.body;
+
+         const userData = await User.findOne({ where: { id: req?.user?.id } });
+
+         if (!userData)
+            return res
+               .status(400)
+               .json({ "root.server": "User is not defined" });
+
+         const dbPass = userData.password;
+         const isPassEquals = await bcrypt.compare(currentPassword, dbPass);
+
+         if (!isPassEquals)
+            return res
+               .status(400)
+               .json({ currentPassword: "Password is not correct" });
+
+         if (password !== rePassword)
+            return res
+               .status(400)
+               .json({ rePassword: "Re-entered password is not correct" });
+
+         await ChangePass.destroy({
+            where: {
+               user_id: userData.id,
+               dateEndChange: { [Op.lt]: sequelize.fn("NOW") },
+            },
+         });
+
+         const changePassData = await ChangePass.findOne({
+            where: {
+               user_id: userData.id,
+               dateEndChange: { [Op.gte]: sequelize.fn("NOW") },
+            },
+         });
+
+         if (changePassData)
+            return res.status(400).json({
+               "root.server":
+                  "The password change email has already been send.",
+            });
+
+         const changePassLink = v4();
+         const hashPassword = await bcrypt.hash(password, 5);
+
+         const changePassDataNew = await ChangePass.create({
+            changePassLink,
+            user_id: userData.id,
+            password: hashPassword,
+         });
+         try {
+            await mailService.sendMessage(
+               userData.email,
+               `${process.env.CLIENT_URL}${config.CLIENT_CHANGE_PASSWORD_CONFIRM_ROUTE}/${changePassLink}`,
+               "change"
+            );
+         } catch (error) {
+            await changePassDataNew.destroy();
+            throw error;
+         }
+         res.json(userData.email);
+      } catch (e) {
+         console.log(e);
+         res.status(500).json(e.message);
+      }
+   };
+   confirmChangePassSettings = async (req, res) => {
+      try {
+         const { changePassLink } = req.body;
+
+         if (!changePassLink) return res.status(404).json("Not valid request");
+
+         const changePassData = await ChangePass.findOne({
+            where: {
+               changePassLink,
+               user_id: req?.user?.id,
+               dateEndChange: { [Op.gte]: sequelize.fn("NOW") },
+            },
+         });
+
+         if (!changePassData) return res.status(404).json("Token is not found");
+
+         await User.update(
+            { refreshToken: null, password: changePassData.password },
+            { where: { id: req?.user?.id } }
+         );
+
+         await changePassData.destroy();
+
+         res.json(true);
+      } catch (e) {
+         console.log(e);
+         res.status(500).json(e.message);
       }
    };
 }

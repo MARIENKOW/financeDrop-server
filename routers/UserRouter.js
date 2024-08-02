@@ -38,4 +38,34 @@ UserRouter.post(
    controller.createOtherDeposit
 );
 
+UserRouter.post("/cash-out", authAdminMiddelware, controller.cashOut);
+UserRouter.delete("/img", autUserMiddelware, controller.deleteImgSettings);
+
+UserRouter.post("/img", autUserMiddelware, controller.createImgSettings);
+
+UserRouter.post("/updateName", autUserMiddelware, controller.updateName);
+
+UserRouter.post(
+   "/updateAddressMatic",
+   autUserMiddelware,
+   controller.updateAddressMatic
+);
+UserRouter.post(
+   "/updateUsername",
+   autUserMiddelware,
+   controller.updateUsername
+);
+
+UserRouter.post(
+   "/changePassSettings",
+   autUserMiddelware,
+   controller.changePassSettings
+);
+
+UserRouter.post(
+   "/changePassSettings/confirm",
+   autUserMiddelware,
+   controller.confirmChangePassSettings
+);
+
 export default UserRouter;

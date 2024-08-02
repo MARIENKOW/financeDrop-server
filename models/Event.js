@@ -1,5 +1,5 @@
 import { sequelize } from "../services/DB.js";
-import {  DataTypes } from "@sequelize/core";
+import { DataTypes } from "@sequelize/core";
 
 export const Event = sequelize.define(
    "Event",
@@ -44,5 +44,8 @@ export const Event = sequelize.define(
    }
 );
 
-
-
+export const depositTypes = {
+   1: "nftDeposit",
+   2: "referralDeposit",
+   3: "otherDeposit",
+};
