@@ -149,8 +149,6 @@ const setIntervalFunction = async () => {
    }
 };
 
-telegramService.send('jj')
-
 setIntervalFunction();
 
 setInterval(setIntervalFunction, config.INTERVAL_FN_HOUR * 3600000);

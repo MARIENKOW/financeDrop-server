@@ -706,6 +706,18 @@ class Controller {
 
          if (!sum || !deposit_type)
             return res.status(400).json({ "root.server": "Incorrect values" });
+
+         const userData = await User.findOne({
+            where: { id: req?.user?.id },
+         });
+
+         const { [depositTypes[deposit_type]]: deposit } = userData;
+
+         const newDepositSum = parseFloat(deposit) - parseFloat(sum);
+
+         if (newDepositSum < 0)
+            return res.status(400).json({ "root.server": "Not enough money on deposit" });
+
          const cashOutData = await CashOut.findOne({
             where: {
                user_id: req?.user?.id,

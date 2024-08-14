@@ -1,29 +1,30 @@
 // import config from "../config";
 import TelegramBot from "node-telegram-bot-api";
+import config from "../config.js";
 
-const TELEGRAM_BOT_TOKEN ='5961574191:AAEh7ELA8ja-2Vi6EOEGeC8MU69Vl_c8yvg'
-const TELEGRAM_CHAT_ID = '-1001611584440'
+const { TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID } = config;
+
+const telegrambot = new TelegramBot(TELEGRAM_BOT_TOKEN, {
+   polling: true,
+});
 
 class TelegramService {
    send = async (text) => {
       try {
-         if(!text) return
-         const telegrambot = new TelegramBot(TELEGRAM_BOT_TOKEN, {
-            polling: true,
-         });
-         await telegrambot.sendMessage(
-            TELEGRAM_CHAT_ID,
-            text
-         );
+         if (!text) return;
+
+         await telegrambot.sendMessage(TELEGRAM_CHAT_ID, text);
          // telegrambot.on('message',(m)=>{
          //    console.log(m.text);
+         //    console.log(m);
          //    telegrambot.sendMessage(
          //       TELEGRAM_CHAT_ID,
-               // m.text
+         //       m.text
          //    );
          // })
       } catch (error) {
-         throw error;
+         console.log(error);
+         // throw error;
       }
    };
 }

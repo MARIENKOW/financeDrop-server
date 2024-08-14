@@ -93,5 +93,63 @@ class Controller {
          console.log(e);
       }
    };
+   changePassSettings = async (req, res, user_id) => {
+      try {
+         const { password, rePassword, currentPassword } = req.body;
+
+         const adminData = await Admin.findOne({
+            where: { id: req?.admin?.id },
+         });
+
+         if (!adminData)
+            return res
+               .status(400)
+               .json({ "root.server": "User is not defined" });
+
+         const dbPass = adminData.password;
+         const isPassEquals = await bcrypt.compare(currentPassword, dbPass);
+
+         if (!isPassEquals)
+            return res
+               .status(400)
+               .json({ currentPassword: "Password is not correct" });
+
+         if (password !== rePassword)
+            return res
+               .status(400)
+               .json({ rePassword: "Re-entered password is not correct" });
+
+         const hashPassword = await bcrypt.hash(password, 5);
+
+         await Admin.update(
+            { password: hashPassword },
+            { where: { id: req?.admin?.id } }
+         );
+
+         res.json(true);
+      } catch (e) {
+         console.log(e);
+         res.status(500).json(e.message);
+      }
+   };
+   changeName = async (req, res) => {
+      try {
+         const { name } = req.body;
+
+         if (!name)
+            return res.status(400).json({ "root.server": "Incorrect values" });
+
+         await Admin.update({ name }, { where: { id: req?.admin?.id } });
+
+         const adminData = await Admin.findOne({
+            where: { id: req?.admin?.id },
+         });
+
+         res.status(200).json(adminData);
+      } catch (e) {
+         console.log(e);
+         res.status(500).json(e?.message);
+      }
+   };
 }
 export default new Controller();

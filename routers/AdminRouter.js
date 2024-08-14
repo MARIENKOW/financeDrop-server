@@ -12,4 +12,15 @@ AdminRouter.get("/refresh", adminController.refresh);
 
 AdminRouter.get("/aboutAdmin", autAdminMiddelware, adminController.aboutAdmin);
 
+AdminRouter.post(
+   "/settings/change-password",
+   autAdminMiddelware,
+   adminController.changePassSettings
+);
+AdminRouter.post(
+   "/settings/change-name",
+   autAdminMiddelware,
+   adminController.changeName
+);
+
 export default AdminRouter;
