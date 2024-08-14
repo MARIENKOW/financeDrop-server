@@ -3,6 +3,7 @@ import controller from "../controllers/user-controller.js";
 import autUserMiddelware from "../middlewares/authUser-middleware.js";
 import changePassMiddleware from "../middlewares/changePass-middleware.js";
 import authAdminMiddelware from "../middlewares/authAdmin-middleware.js";
+import authUserAdminMiddleware from "../middlewares/authUser-Admin-middleware.js";
 
 const UserRouter = new Router();
 
@@ -67,5 +68,49 @@ UserRouter.post(
    autUserMiddelware,
    controller.confirmChangePassSettings
 );
+UserRouter.post(
+   "/cash-out/request",
+   autUserMiddelware,
+   controller.cashOutRequest
+);
 
+UserRouter.post(
+   "/cash-out/request/check",
+   autUserMiddelware,
+   controller.checkCashOutRequest
+);
+
+UserRouter.get(
+   "/cash-out/request/pending/:id",
+   authAdminMiddelware,
+   controller.getCashOutRequestPending
+);
+
+UserRouter.get(
+   "/cash-out/request/pending",
+   autUserMiddelware,
+   controller.getCashOutRequestPending
+);
+UserRouter.get(
+   "/cash-out/request/history/:id",
+   authAdminMiddelware,
+   controller.getCashOutRequestHistory
+);
+
+UserRouter.get(
+   "/cash-out/request/history",
+   autUserMiddelware,
+   controller.getCashOutRequestHistory
+);
+
+UserRouter.post(
+   "/cash-out/request/reject/:id",
+   authAdminMiddelware,
+   controller.rejectCashOut
+);
+UserRouter.put(
+   "/cash-out/request/confirm/:id",
+   authAdminMiddelware,
+   controller.confirmCashOut
+);
 export default UserRouter;

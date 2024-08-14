@@ -15,6 +15,9 @@ import imgService from "../services/img-service.js";
 import userService from "../services/user-service.js";
 import { ChangePass } from "../models/ChangePass.js";
 import { Referral } from "../models/Referral.js";
+import { CashOut, cashOutTypes } from "../models/CashOut.js";
+import eventService from "../services/event-service.js";
+import telegramService from "../services/telegram-service.js";
 
 class Controller {
    signIn = async (req, res) => {
@@ -435,8 +438,6 @@ class Controller {
       try {
          const { sum, description, deposit_type, user_id } = req.body;
 
-         console.log(sum, user_id, deposit_type);
-
          if (!sum || !user_id || !deposit_type)
             return res.status(400).json({ "root.server": "Incorrect values" });
 
@@ -697,6 +698,271 @@ class Controller {
       } catch (e) {
          console.log(e);
          res.status(500).json(e.message);
+      }
+   };
+   checkCashOutRequest = async (req, res) => {
+      try {
+         const { sum, deposit_type } = req.body;
+
+         if (!sum || !deposit_type)
+            return res.status(400).json({ "root.server": "Incorrect values" });
+         const cashOutData = await CashOut.findOne({
+            where: {
+               user_id: req?.user?.id,
+               deposit_type,
+               type: 1,
+            },
+         });
+
+         if (cashOutData)
+            return res.status(403).json({
+               "root.server":
+                  "Request with current deposit already exists, wait for the operator to process the request.",
+            });
+
+         return res.status(200).json(true);
+      } catch (e) {
+         console.log(e);
+         res.status(500).json(e?.message);
+      }
+   };
+   cashOutRequest = async (req, res) => {
+      try {
+         const { sum, addressMatic, deposit_type } = req.body;
+         console.log(sum, addressMatic, deposit_type);
+
+         const img = req?.files?.img;
+
+         if (!sum || !addressMatic || !deposit_type)
+            return res.status(400).json("Incorrect values");
+
+         const cashOutData = await CashOut.findOne({
+            where: {
+               user_id: req?.user?.id,
+               deposit_type,
+               type: 1,
+            },
+         });
+
+         if (cashOutData) return res.status(403).json("Request already exists");
+
+         let img_id = null;
+         let img_path = null;
+         if (img) {
+            const imgData = await imgService.save(img);
+            img_id = imgData?.img_id;
+            img_path = imgData?.path;
+         }
+
+         try {
+            await CashOut.create({
+               user_id: req?.user?.id,
+               deposit_type,
+               type: 1,
+               sum,
+               img_id,
+               addressMatic,
+            });
+         } catch (error) {
+            if (img) {
+               await imgService.delete(img_id);
+            }
+            throw error;
+         }
+         const userData = await User.findOne({ where: { id: req?.user?.id } });
+         await telegramService.send(`
+            Username: @${userData?.username}\nEmail: ${
+            userData?.email
+         }\nAddress Matic: ${addressMatic}\nSum: $ ${sum}\nDeposit: ${
+            depositTypes[deposit_type]
+         }\n${img_path ? "Screenshot: " + process.env.API_URL + img_path : ""}
+            `);
+
+         return res.status(200).json(true);
+      } catch (e) {
+         console.log(e);
+         res.status(500).json(e?.message);
+      }
+   };
+   getCashOutRequestPending = async (req, res) => {
+      try {
+         const user_id = req?.user?.id || req?.params?.id;
+
+         if (!user_id) return res.status(400).json("Incorrect values");
+
+         const cashOutData = await CashOut.findAll({
+            order: [
+               ["date", "desc"],
+               ["id", "desc"],
+            ],
+            where: {
+               user_id,
+               type: 1,
+            },
+            include: [
+               {
+                  model: Img,
+                  as: "img",
+               },
+            ],
+         });
+         console.log(cashOutData);
+
+         return res.status(200).json(eventService.filterEvent(cashOutData));
+      } catch (e) {
+         console.log(e);
+         res.status(500).json(e?.message);
+      }
+   };
+   rejectCashOut = async (req, res) => {
+      try {
+         const { adminMessage } = req?.body;
+         const id = req?.params?.id;
+
+         if (!id) return res.status(400).json("Incorrect values");
+
+         const cashOutData = await CashOut.findOne({
+            where: {
+               id,
+               type: 1,
+            },
+         });
+
+         if (!cashOutData) return res.status(400).json("Incorrect values");
+
+         await CashOut.update(
+            { type: 3, adminMessage, date: sequelize.fn("CURDATE") },
+            {
+               where: {
+                  id,
+                  type: 1,
+               },
+            }
+         );
+
+         return res.status(200).json(true);
+      } catch (e) {
+         console.log(e);
+         res.status(500).json(e?.message);
+      }
+   };
+   confirmCashOut = async (req, res) => {
+      try {
+         const id = req?.params?.id;
+
+         if (!id) return res.status(400).json("Incorrect values");
+
+         const cashOutData = await CashOut.findOne({
+            where: {
+               id,
+               type: 1,
+            },
+         });
+
+         if (!cashOutData) return res.status(400).json("Incorrect values");
+
+         const { sum, deposit_type, user_id } = cashOutData.dataValues;
+
+         if (!sum || !user_id || !deposit_type)
+            throw new Error("not correct cashOut data");
+
+         const { id: checkUp_id } = await CheckUp.findOne({
+            order: [["date", "desc"]],
+         });
+
+         const userData = await User.findOne({
+            where: { id: user_id },
+         });
+
+         if (!userData) throw new Error("not correct cashOut data");
+
+         const { [depositTypes[deposit_type]]: deposit, id: userData_id } =
+            userData;
+
+         const newDepositSum = parseFloat(deposit) - parseFloat(sum);
+
+         if (newDepositSum < 0) {
+            await CashOut.update(
+               {
+                  type: 3,
+                  adminMessage: "Not enough money on deposit",
+                  date: sequelize.fn("CURDATE"),
+               },
+               {
+                  where: {
+                     id,
+                     type: 1,
+                  },
+               }
+            );
+            return res.status(403).json("not enough money on deposit");
+         }
+
+         const eventData = await Event.create({
+            sum,
+            name: "cash out",
+            user_id: userData_id,
+            checkUp_id,
+            deposit_type,
+            increment: 0,
+         });
+
+         try {
+            await User.update(
+               {
+                  [depositTypes[deposit_type]]: newDepositSum.toFixed(2),
+               },
+               { where: { id: userData_id } }
+            );
+         } catch (error) {
+            await eventData.destroy();
+            throw error;
+         }
+
+         await CashOut.update(
+            { type: 2, date: sequelize.fn("CURDATE") },
+            {
+               where: {
+                  id,
+                  type: 1,
+               },
+            }
+         );
+         return res.status(200).json(true);
+      } catch (e) {
+         console.log(e);
+         res.status(500).json(e?.message);
+      }
+   };
+   getCashOutRequestHistory = async (req, res) => {
+      try {
+         const user_id = req?.user?.id || req?.params?.id;
+         // console.log(req?.user);
+
+         if (!user_id) return res.status(400).json("Incorrect values");
+
+         const cashOutData = await CashOut.findAll({
+            order: [
+               ["date", "desc"],
+               ["id", "desc"],
+            ],
+            where: {
+               user_id,
+               type: [2, 3],
+            },
+            include: [
+               {
+                  model: Img,
+                  as: "img",
+               },
+            ],
+         });
+         console.log(cashOutData);
+
+         return res.status(200).json(eventService.filterEvent(cashOutData));
+      } catch (e) {
+         console.log(e);
+         res.status(500).json(e?.message);
       }
    };
 }

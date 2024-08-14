@@ -1,6 +1,7 @@
 import { sequelize } from "../services/DB.js";
 import { DataTypes } from "@sequelize/core";
 import { Event } from "./Event.js";
+import { CashOut } from "./CashOut.js";
 
 export const CheckUp = sequelize.define(
    "CheckUp",

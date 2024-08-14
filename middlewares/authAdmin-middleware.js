@@ -17,7 +17,7 @@ const authAdminMiddleware = (req, res, next) => {
       if (adminData.role !== "admin")
          return res.status(401).json("not authorized");
 
-      req.user = adminData;
+      req.admin = adminData;
       next();
    } catch (e) {
       console.log(e);

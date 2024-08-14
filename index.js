@@ -19,6 +19,8 @@ import { Referral } from "./models/Referral.js";
 import { Site } from "./models/Site.js";
 import SiteRouter from "./routers/SiteRouter.js";
 
+import telegramService from "./services/telegram-service.js";
+
 dotenv.config();
 
 const PORT = process.env.PORT;
@@ -102,7 +104,7 @@ const setIntervalFunction = async () => {
                });
 
                if (fromUserData) {
-                  const { referralPercent } = Site.findOne();
+                  const { referralPercent } = await Site.findOne();
 
                   const referralSum = sum * (referralPercent / 100);
                   await Event.create({
@@ -146,6 +148,8 @@ const setIntervalFunction = async () => {
       console.log(error);
    }
 };
+
+telegramService.send('jj')
 
 setIntervalFunction();
 

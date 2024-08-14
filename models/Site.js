@@ -9,6 +9,14 @@ export const Site = sequelize.define(
          allowNull: false,
          primaryKey:true
       },
+      cashOutPercent: {
+         type: DataTypes.INTEGER,
+         allowNull: false,
+      },
+      wallet: {
+         type: DataTypes.STRING,
+         allowNull: false,
+      },
    },
    {
       tableName: "site",
