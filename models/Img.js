@@ -1,8 +1,6 @@
 import { sequelize } from "../services/DB.js";
-import {  DataTypes } from "@sequelize/core";
-import { Nft } from "./Nft.js";
-import { User } from "./User.js";
-import { CashOut } from "./CashOut.js";
+import { DataTypes } from "@sequelize/core";
+import { Item } from "./Item.js";
 
 export const Img = sequelize.define(
    "Img",
@@ -15,15 +13,15 @@ export const Img = sequelize.define(
       name: {
          type: DataTypes.STRING,
          allowNull: true,
-         defaultValue:null
+         defaultValue: null,
       },
       path: {
          type: DataTypes.STRING,
          allowNull: false,
          get() {
-            return process.env.API_URL+this.getDataValue("path");
+            return process.env.API_URL + this.getDataValue("path");
          },
-      }
+      },
    },
    {
       tableName: "img",
@@ -31,6 +29,4 @@ export const Img = sequelize.define(
    }
 );
 
-Img.hasOne(Nft,{foreignKey:'img_id'})
-Img.hasOne(User,{foreignKey:'img_id'})
-Img.hasOne(CashOut,{foreignKey:'img_id'})
+Img.hasOne(Item, { foreignKey: "img_id" });

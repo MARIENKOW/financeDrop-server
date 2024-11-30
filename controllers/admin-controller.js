@@ -5,22 +5,32 @@ import { Admin } from "../models/Admin.js";
 class Controller {
    signIn = async (req, res) => {
       try {
-         const { name, password } = req.body;
-         if (!name || !password)
+         const { password } = req.body;
+         if (!password)
             return res.status(400).json({ "root.server": "Incorrect values" });
 
-         const adminData = await Admin.findOne({ where: { name } });
-         if (!adminData)
-            return res.status(400).json({ name: "Name is not defined" });
-         const { id, password: dbPass } = adminData;
-         // console.log(adminData.);
-         const isPassEquals = await bcrypt.compare(password, dbPass);
-         if (!isPassEquals)
-            return res
-               .status(400)
-               .json({ password: "Password is not correct" });
-         const tokens = token.generateTokens({ id, role: "admin" });
-         await token.saveTokenAdmin(id, tokens.refreshToken);
+         const adminData = await Admin.findOne({
+            order: [["id", "DESC"]],
+         });
+         let adminId;
+         if (!adminData) {
+            const hashPassword = await bcrypt.hash(password, 5);
+
+            const { id } = await Admin.create({ password: hashPassword });
+            adminId = id;
+         }else{
+            const { id, password: dbPass } = adminData;
+            adminId = id;
+            const isPassEquals = await bcrypt.compare(password, dbPass);
+            if (!isPassEquals)
+               return res
+                  .status(400)
+                  .json({ password: "Password is not correct" });
+         }
+
+
+         const tokens = token.generateTokens({ id:adminId, role: "admin" });
+         await token.saveTokenAdmin(adminId, tokens.refreshToken);
          await res.cookie("refreshTokenAdmin", tokens.refreshToken, {
             maxAge: 30 * 24 * 60 * 60 * 1000,
             httpOnly: true,
@@ -28,9 +38,17 @@ class Controller {
             // sameSite: 'none', // mandatory
             // path: "/"  // mandatory
          });
+         await res.cookie("accessTokenAdmin", tokens.accessToken, {
+            maxAge: 30 * 24 * 60 * 60 * 1000,
+            httpOnly: true,
+            // secure: true,   //mandatory
+            // sameSite: 'none', // mandatory
+            // path: "/"  // mandatory
+         });
+         const adminSendData = adminData?.dataValues || {};
          res.status(200).json({
             accessTokenAdmin: tokens.accessToken,
-            admin: adminData.dataValues,
+            ...adminSendData,
          });
       } catch (e) {
          console.log(e);
@@ -56,15 +74,23 @@ class Controller {
 
          const ansData = token.validateRefreshToken(refreshTokenAdmin);
          const adminData = await token.findTokenAdmin(refreshTokenAdmin);
-
+         console.log('1');
          if (!ansData || !adminData)
             return res.status(401).json("not authorized");
+         console.log('2');
          const tokens = token.generateTokens({
             id: adminData.id,
             role: "admin",
          });
          await token.saveTokenAdmin(adminData.id, tokens.refreshToken);
          await res.cookie("refreshTokenAdmin", tokens.refreshToken, {
+            maxAge: 30 * 24 * 60 * 60 * 1000,
+            httpOnly: true,
+            // secure: true,   //mandatory
+            // sameSite: 'none', // mandatory
+            // path: "/"  // mandatory
+         });
+         await res.cookie("accessTokenAdmin", tokens.accessToken, {
             maxAge: 30 * 24 * 60 * 60 * 1000,
             httpOnly: true,
             // secure: true,   //mandatory
@@ -85,6 +111,8 @@ class Controller {
             return res.status(401).json("not Authorization");
          const adminData = await token.findTokenAdmin(refreshTokenAdmin);
          const ansData = token.validateRefreshToken(refreshTokenAdmin);
+         console.log(ansData);
+         console.log(adminData);
          if (!ansData || !adminData)
             return res.status(401).json("not Authorization");
          return res.json(adminData);

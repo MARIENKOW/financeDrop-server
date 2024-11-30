@@ -1,25 +1,14 @@
 import express from "express";
 import cors from "cors";
-import UserRouter from "./routers/UserRouter.js";
 import * as dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import http from "http";
 import AdminRouter from "./routers/AdminRouter.js";
-import NftRouter from "./routers/NftRouter.js";
+import ItemRouter from "./routers/ItemRouter.js";
 import fileUpload from "express-fileupload";
-import { CheckUp } from "./models/CheckUp.js";
-import { Op } from "sequelize";
-import { NftBuy } from "./models/NftBuy.js";
-import { sequelize } from "./services/DB.js";
-import { Nft } from "./models/Nft.js";
-import config from "./config.js";
-import { User } from "./models/User.js";
-import { Event } from "./models/Event.js";
-import { Referral } from "./models/Referral.js";
-import { Site } from "./models/Site.js";
-import SiteRouter from "./routers/SiteRouter.js";
 
 import telegramService from "./services/telegram-service.js";
+import ProductLineRouter from "./routers/ProductLineRouter.js";
 
 dotenv.config();
 
@@ -38,10 +27,9 @@ app.use(
 );
 
 app.use(process.env.NFT_FOLDER, express.static("./" + process.env.NFT_FOLDER));
-app.use("/User", UserRouter);
-app.use("/", SiteRouter);
 app.use("/Admin", AdminRouter);
-app.use("/Nft", NftRouter);
+app.use("/Item", ItemRouter);
+app.use("/ProductLine", ProductLineRouter);
 
 const web = http.Server(app);
 
@@ -52,103 +40,3 @@ try {
 } catch (e) {
    console.log(`${e.message}`);
 }
-
-const setIntervalFunction = async () => {
-   try {
-      const checkUpDate = await CheckUp.findOne({
-         where: { date: { [Op.gte]: sequelize.fn("CURDATE") } },
-         order: [["date", "desc"]],
-      });
-
-      if (checkUpDate) throw new Error("not correct date");
-
-      const newCheckUp = await CheckUp.create();
-
-      const { id: checkUp_id } = newCheckUp;
-
-      const nftData = await Nft.findAll({
-         include: [
-            {
-               model: NftBuy,
-               as: "nftBuy",
-               required: true,
-               where: { active: 1 },
-            },
-         ],
-      });
-
-      if (!nftData) throw new Error("not found NftBuy");
-
-      try {
-         for (let nft of nftData) {
-            const sum = nft.price * (nft.percent / 100);
-            await Event.create({
-               name: nft?.name,
-               deposit_type: 1,
-               user_id: nft?.nftBuy?.user_id,
-               sum,
-               checkUp_id,
-            });
-
-            const { nftDeposit, id, username } = await nft?.nftBuy.getUser();
-
-            const referralData = await Referral.findOne({
-               where: { to_id: id },
-            });
-
-            if (referralData) {
-               const { from_id } = referralData;
-
-               const fromUserData = await User.findOne({
-                  where: { id: from_id },
-               });
-
-               if (fromUserData) {
-                  const { referralPercent } = await Site.findOne();
-
-                  const referralSum = sum * (referralPercent / 100);
-                  await Event.create({
-                     name: "@" + username,
-                     deposit_type: 2,
-                     user_id: fromUserData?.id,
-                     sum: referralSum,
-                     checkUp_id,
-                  });
-                  await User.update(
-                     {
-                        referralDeposit: (
-                           parseFloat(fromUserData?.referralDeposit) +
-                           referralSum
-                        ).toFixed(2),
-                     },
-                     { where: { id: fromUserData?.id } }
-                  );
-               }
-            }
-
-            await User.update(
-               { nftDeposit: (parseFloat(nftDeposit) + sum).toFixed(2) },
-               { where: { id } }
-            );
-         }
-      } catch (error) {
-         newCheckUp.destroy();
-         throw error;
-      }
-
-      await NftBuy.update(
-         {
-            active: 0,
-         },
-         {
-            where: { date_end: { [Op.lte]: sequelize.fn("CURDATE") } },
-         }
-      );
-   } catch (error) {
-      console.log(error);
-   }
-};
-
-setIntervalFunction();
-
-setInterval(setIntervalFunction, config.INTERVAL_FN_HOUR * 3600000);

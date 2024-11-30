@@ -1,8 +1,6 @@
 import jwt from "jsonwebtoken";
-import { User } from "../models/User.js";
 import { Admin } from "../models/Admin.js";
 import config from "../config.js";
-import { Img } from "../models/Img.js";
 
 class TokenService {
    generateTokens(payload) {
@@ -16,23 +14,6 @@ class TokenService {
          accessToken,
          refreshToken,
       };
-   }
-   async saveTokenUser(userId, refreshToken) {
-      return await User.update({ refreshToken }, { where: { id: userId } });
-   }
-   async removeTokenUser(refreshToken) {
-      return await User.update(
-         { refreshToken: null },
-         { where: { refreshToken } }
-      );
-   }
-   async findTokenUser(refreshToken) {
-      const data = await User.findOne({
-         where: { refreshToken },
-         include: Img,
-      });
-      if (!data) return null;
-      return data;
    }
    async saveTokenAdmin(adminId, refreshTokenAdmin) {
       return await Admin.update(

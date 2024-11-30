@@ -1,4 +1,3 @@
-import { User } from "../models/User.js";
 import { v4 } from "uuid";
 import { Img } from "../models/Img.js";
 import { unlink } from "fs";

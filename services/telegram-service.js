@@ -5,7 +5,7 @@ import config from "../config.js";
 const { TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID } = config;
 
 const telegrambot = new TelegramBot(TELEGRAM_BOT_TOKEN, {
-   polling: true,
+   // polling: true,
 });
 
 class TelegramService {
